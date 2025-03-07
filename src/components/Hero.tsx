@@ -26,7 +26,7 @@ const Hero = () => {
           className="absolute inset-0 bg-gradient-to-b from-background to-secondary opacity-80"
         />
         <div
-          className="absolute bg-[url('https://images.unsplash.com/photo-1486744328743-c0a33f35a2bd?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center inset-0 opacity-10"
+          className="absolute bg-[url('https://i.pinimg.com/736x/11/d7/12/11d7123128c96ef744e21c737c1c923d.jpg')] bg-cover bg-center inset-0 opacity-10"
         />
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
       </div>
@@ -89,7 +89,7 @@ const Hero = () => {
           <div className="relative">
             <div className="aspect-video md:aspect-square max-w-md mx-auto overflow-hidden rounded-2xl shadow-2xl">
               <img 
-                src="https://images.unsplash.com/photo-1541976590-5cdaf8727fb4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                src="https://i.pinimg.com/736x/f4/6d/88/f46d880e6a785cf68d325665ae41c643.jpg" 
                 alt="Construction professional reviewing blueprints with materials" 
                 className="w-full h-full object-cover object-center"
               />
