@@ -3,7 +3,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Truck, Clock, Tools, Headset, Building, Ruler, HardHat } from 'lucide-react';
+import { CheckCircle2, Truck, Clock, Wrench, Headset, Building, Ruler, HardHat } from 'lucide-react';
 
 const Services = () => {
   const services = [
@@ -13,7 +13,7 @@ const Services = () => {
       description: "Same-day delivery within city limits, or 1-3 business days nationwide with real-time tracking."
     },
     {
-      icon: <Tools className="h-10 w-10 text-primary" />,
+      icon: <Wrench className="h-10 w-10 text-primary" />,
       title: "Installation Services",
       description: "Professional installation of materials and systems by certified technicians."
     },
