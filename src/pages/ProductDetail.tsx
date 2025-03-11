@@ -15,7 +15,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useCart } from '@/contexts/CartContext';
 import { getProductById, Product } from '@/lib/data';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getFallbackImageUrl } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 
 const ProductDetail = () => {
@@ -23,6 +23,7 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
+  const [isImageError, setIsImageError] = useState(false);
   
   const product = getProductById(productId || '');
   
@@ -51,10 +52,22 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
+    toast({
+      title: "Added to cart",
+      description: `${quantity} × ${product.name} added to your cart`,
+    });
   };
   
   const increaseQuantity = () => setQuantity(prev => prev + 1);
   const decreaseQuantity = () => setQuantity(prev => prev > 1 ? prev - 1 : 1);
+  
+  const handleImageError = () => {
+    setIsImageError(true);
+  };
+  
+  const imageUrl = isImageError 
+    ? getFallbackImageUrl() 
+    : product.image;
   
   const discountedPrice = product.discount
     ? product.price * (1 - product.discount / 100)
@@ -75,13 +88,10 @@ const ProductDetail = () => {
             {/* Product Image */}
             <div className="bg-card rounded-xl overflow-hidden">
               <img 
-                src={product.image} 
+                src={imageUrl} 
                 alt={product.name} 
                 className="w-full h-full object-cover aspect-square"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "https://placehold.co/600x600/EEE/31343C?text=Image+Not+Available";
-                }}
+                onError={handleImageError}
               />
             </div>
             
