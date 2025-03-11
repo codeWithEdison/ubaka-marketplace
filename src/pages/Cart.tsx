@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useCart } from '@/contexts/CartContext';
+import { formatCurrency } from '@/lib/utils';
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, getTotalPrice } = useCart();
@@ -17,10 +18,6 @@ const Cart = () => {
     e.preventDefault();
     // In a real app, we would validate the coupon code here
     alert(`Coupon ${couponCode} applied!`);
-  };
-  
-  const formatPrice = (price: number) => {
-    return `$${price.toFixed(2)}`;
   };
   
   const totalPrice = getTotalPrice();
@@ -71,6 +68,10 @@ const Cart = () => {
                                 src={product.image}
                                 alt={product.name}
                                 className="w-full h-full object-cover rounded-md"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = "https://placehold.co/600x600/EEE/31343C?text=Image+Not+Available";
+                                }}
                               />
                             </div>
                             
@@ -86,11 +87,11 @@ const Cart = () => {
                                 </div>
                                 
                                 <div className="mt-2 sm:mt-0 text-right">
-                                  <span className="font-medium">{formatPrice(itemTotal)}</span>
+                                  <span className="font-medium">{formatCurrency(itemTotal)}</span>
                                   
                                   {product.discount && (
                                     <div className="text-sm text-muted-foreground line-through">
-                                      {formatPrice(product.price * quantity)}
+                                      {formatCurrency(product.price * quantity)}
                                     </div>
                                   )}
                                 </div>
@@ -146,12 +147,12 @@ const Cart = () => {
                     <div className="space-y-4">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
-                        <span>{formatPrice(totalPrice)}</span>
+                        <span>{formatCurrency(totalPrice)}</span>
                       </div>
                       
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Shipping</span>
-                        <span>{shipping > 0 ? formatPrice(shipping) : 'Free'}</span>
+                        <span>{shipping > 0 ? formatCurrency(shipping) : 'Free'}</span>
                       </div>
                       
                       <form onSubmit={handleCouponSubmit} className="flex gap-2">
@@ -170,7 +171,7 @@ const Cart = () => {
                       
                       <div className="flex justify-between font-semibold text-lg">
                         <span>Total</span>
-                        <span>{formatPrice(orderTotal)}</span>
+                        <span>{formatCurrency(orderTotal)}</span>
                       </div>
                       
                       <Link to="/checkout" className="block w-full">
