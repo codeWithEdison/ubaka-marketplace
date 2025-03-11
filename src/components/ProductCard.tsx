@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Heart, Star, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from '@/lib/data';
+import { useCart } from '@/contexts/CartContext';
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +16,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { toast } = useToast();
+  const { addToCart } = useCart();
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -23,13 +24,10 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
     
     setIsAddingToCart(true);
     
-    // Simulate API call delay
+    // Add to cart after a short delay for UI feedback
     setTimeout(() => {
+      addToCart(product);
       setIsAddingToCart(false);
-      toast({
-        title: "Added to cart",
-        description: `${product.name} has been added to your cart.`,
-      });
     }, 600);
   };
   

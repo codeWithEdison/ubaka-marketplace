@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, ShoppingCart, Menu, X, User } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useCart } from '@/contexts/CartContext';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,6 +12,7 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
   const { toast } = useToast();
+  const { getTotalItems } = useCart();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -48,6 +49,8 @@ const Navbar = () => {
     { name: "About", path: "/about" },
     { name: "Contact", path: "/contact" },
   ];
+
+  const cartItemCount = getTotalItems();
 
   return (
     <header 
@@ -107,7 +110,7 @@ const Navbar = () => {
               <Button variant="ghost" size="icon" className="rounded-full relative">
                 <ShoppingCart className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  0
+                  {cartItemCount}
                 </span>
               </Button>
             </Link>
@@ -119,7 +122,7 @@ const Navbar = () => {
               <Button variant="ghost" size="icon" className="rounded-full relative">
                 <ShoppingCart className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  0
+                  {cartItemCount}
                 </span>
               </Button>
             </Link>
@@ -176,6 +179,12 @@ const Navbar = () => {
             >
               <User className="h-4 w-4" />
               <span>My Account</span>
+            </Link>
+            <Link 
+              to="/admin" 
+              className="px-2 py-1.5 rounded-md transition-colors text-ubaka-700 dark:text-white/80 hover:bg-secondary"
+            >
+              Administration
             </Link>
           </nav>
         </div>
