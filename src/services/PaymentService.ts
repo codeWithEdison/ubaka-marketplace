@@ -4,7 +4,7 @@
 import { toast } from '@/hooks/use-toast';
 
 // Payment types
-export type PaymentMethod = 'credit_card' | 'mobile_money' | 'crypto';
+export type PaymentMethod = 'credit_card' | 'mobile_money' | 'crypto' | 'stripe';
 
 // Credit card data
 export interface CreditCardData {
@@ -23,6 +23,12 @@ export interface MobileMoneyData {
 export interface CryptoData {
   walletAddress: string;
   network?: string;
+}
+
+// Stripe data
+export interface StripeData {
+  paymentMethodId?: string;
+  email: string;
 }
 
 // Transaction result
@@ -58,6 +64,145 @@ export interface OrderDetails {
 
 class PaymentService {
   private apiBaseUrl: string = '/api/payments'; // Replace with your API URL in production
+  private stripePromise: Promise<any> | null = null;
+
+  constructor() {
+    // Initialize Stripe if available
+    if (window.Stripe) {
+      this.stripePromise = window.Stripe('pk_test_51OuWRMQnUtNnrdoKN93GYo4Zt0w3xfHsePO6fzfVafzVWCxIvTnRd30oWr0CRRB877iKSUd1IeBE7u1sDDqiIb9s00Ea9B8nUo');
+    }
+  }
+
+  /**
+   * Load Stripe script dynamically
+   */
+  private loadStripe(): Promise<any> {
+    if (this.stripePromise) {
+      return this.stripePromise;
+    }
+
+    if (window.Stripe) {
+      this.stripePromise = Promise.resolve(window.Stripe('pk_test_51OuWRMQnUtNnrdoKN93GYo4Zt0w3xfHsePO6fzfVafzVWCxIvTnRd30oWr0CRRB877iKSUd1IeBE7u1sDDqiIb9s00Ea9B8nUo'));
+      return this.stripePromise;
+    }
+
+    // Load Stripe.js if it's not loaded yet
+    this.stripePromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://js.stripe.com/v3/';
+      script.async = true;
+      script.onload = () => {
+        if (window.Stripe) {
+          resolve(window.Stripe('pk_test_51OuWRMQnUtNnrdoKN93GYo4Zt0w3xfHsePO6fzfVafzVWCxIvTnRd30oWr0CRRB877iKSUd1IeBE7u1sDDqiIb9s00Ea9B8nUo'));
+        } else {
+          reject(new Error('Stripe.js failed to load'));
+        }
+      };
+      script.onerror = () => {
+        reject(new Error('Failed to load Stripe.js'));
+      };
+      document.body.appendChild(script);
+    });
+    
+    return this.stripePromise;
+  }
+
+  /**
+   * Initialize Stripe Elements
+   * @returns Stripe Elements instance
+   */
+  public async initializeStripeElements(): Promise<{
+    stripe: any;
+    elements: any;
+    cardElement: any;
+  }> {
+    try {
+      const stripe = await this.loadStripe();
+      const elements = stripe.elements();
+      
+      // Create card element
+      const cardElement = elements.create('card', {
+        style: {
+          base: {
+            fontSize: '16px',
+            color: '#32325d',
+            fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+            '::placeholder': {
+              color: '#aab7c4',
+            },
+          },
+          invalid: {
+            color: '#fa755a',
+            iconColor: '#fa755a',
+          },
+        },
+      });
+      
+      return { stripe, elements, cardElement };
+    } catch (error) {
+      console.error('Error initializing Stripe:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process a payment with Stripe
+   * @param stripe Stripe instance
+   * @param cardElement Card element
+   * @param orderDetails Order details
+   * @returns Transaction result
+   */
+  public async processStripePayment(
+    stripe: any,
+    cardElement: any,
+    orderDetails: OrderDetails
+  ): Promise<TransactionResult> {
+    try {
+      // Create payment method
+      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name: `${orderDetails.customerInfo.firstName} ${orderDetails.customerInfo.lastName}`,
+          email: orderDetails.customerInfo.email,
+          phone: orderDetails.customerInfo.phoneNumber,
+          address: {
+            line1: orderDetails.customerInfo.address,
+            city: orderDetails.customerInfo.city,
+            state: orderDetails.customerInfo.state,
+            postal_code: orderDetails.customerInfo.zipCode,
+            country: orderDetails.customerInfo.country,
+          },
+        },
+      });
+
+      if (paymentMethodError) {
+        throw new Error(paymentMethodError.message);
+      }
+
+      // In a real implementation, you would send the payment method ID to your server
+      // and create a payment intent there. For demo purposes, we'll simulate success.
+      
+      // Simulate API call
+      await this.simulateApiCall();
+      
+      // Generate a reference number and transaction ID
+      const orderReference = this.generateOrderReference();
+      
+      return {
+        success: true,
+        orderReference,
+        transactionId: paymentMethod.id
+      };
+    } catch (error) {
+      console.error('Stripe payment error:', error);
+      return {
+        success: false,
+        orderReference: '',
+        error: error instanceof Error ? error.message : 'Payment processing failed'
+      };
+    }
+  }
 
   /**
    * Process a credit card payment
@@ -471,7 +616,7 @@ class PaymentService {
   }
 }
 
-// Add type declaration for window.ethereum
+// Add type declaration for window.ethereum and Stripe
 declare global {
   interface Window {
     ethereum?: {
@@ -480,6 +625,7 @@ declare global {
       on: (event: string, callback: (...args: any[]) => void) => void;
       removeListener: (event: string, callback: (...args: any[]) => void) => void;
     };
+    Stripe?: (apiKey: string) => any;
   }
 }
 

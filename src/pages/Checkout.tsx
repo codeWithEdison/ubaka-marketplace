@@ -10,7 +10,8 @@ import {
   AlertCircle, 
   CheckCircle, 
   Loader2,
-  ChevronRight
+  ChevronRight,
+  CreditCard as StripeIcon
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import StripePayment from '@/components/StripePayment';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/utils';
 import paymentService, { 
@@ -106,32 +108,27 @@ const Checkout = () => {
     ethAddress: '',
   });
   
-  // Payment processing states
   const [isPaymentProcessing, setIsPaymentProcessing] = useState<boolean>(false);
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'error' | null>(null);
   const [paymentError, setPaymentError] = useState<string>('');
   const [orderReference, setOrderReference] = useState<string>('');
   
-  // Credit card validation states
   const [cardErrors, setCardErrors] = useState<CardErrors>({
     cardNumber: '',
     cardExpiry: '',
     cardCvc: ''
   });
   
-  // Mobile money states
   const [momoVerificationCode, setMomoVerificationCode] = useState<string>('');
   const [momoVerificationSent, setMomoVerificationSent] = useState<boolean>(false);
   const [momoVerifying, setMomoVerifying] = useState<boolean>(false);
   
-  // MetaMask states
   const [isMetaMaskInstalled, setIsMetaMaskInstalled] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [cryptoTransactionHash, setCryptoTransactionHash] = useState<string>('');
   const [ethNetwork, setEthNetwork] = useState<string | null>(null);
   
-  // Format card number with spaces
   const formatCardNumber = (value: string): string => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
     const matches = v.match(/\d{4,16}/g);
@@ -149,7 +146,6 @@ const Checkout = () => {
     }
   };
   
-  // Format card expiry date
   const formatExpiryDate = (value: string): string => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
     
@@ -160,7 +156,6 @@ const Checkout = () => {
     return v;
   };
   
-  // Handle input change with formatting for card fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
@@ -169,7 +164,6 @@ const Checkout = () => {
     } else if (name === 'cardExpiry') {
       setFormData(prev => ({ ...prev, [name]: formatExpiryDate(value) }));
     } else if (name === 'cardCvc') {
-      // Only allow numbers and max 3 digits
       const cvcValue = value.replace(/[^0-9]/g, '').slice(0, 3);
       setFormData(prev => ({ ...prev, [name]: cvcValue }));
     } else {
@@ -177,7 +171,6 @@ const Checkout = () => {
     }
   };
   
-  // Check if MetaMask is installed on page load
   useEffect(() => {
     const checkMetaMask = async () => {
       setIsMetaMaskInstalled(typeof window.ethereum !== 'undefined');
@@ -198,7 +191,6 @@ const Checkout = () => {
     checkMetaMask();
   }, []);
   
-  // Set up MetaMask event listeners
   useEffect(() => {
     if (!isMetaMaskInstalled) return;
     
@@ -219,7 +211,6 @@ const Checkout = () => {
       }
     };
     
-    // Register events and get cleanup function
     const cleanup = paymentService.registerMetaMaskEvents(
       handleAccountsChanged,
       handleChainChanged
@@ -228,7 +219,6 @@ const Checkout = () => {
     return cleanup;
   }, [isMetaMaskInstalled]);
   
-  // Connect to MetaMask
   const connectWallet = async () => {
     if (!isMetaMaskInstalled) {
       toast({
@@ -267,7 +257,6 @@ const Checkout = () => {
     }
   };
   
-  // Get order details for payment processing
   const getOrderDetails = (): OrderDetails => {
     const totalPrice = getTotalPrice();
     const shipping = totalPrice > 0 ? 4.99 : 0;
@@ -297,9 +286,7 @@ const Checkout = () => {
     };
   };
   
-  // Process credit card payment
   const processCreditCardPayment = async () => {
-    // Validate fields manually (as a backup to the PaymentService validation)
     const cardNumberCleaned = formData.cardNumber.replace(/\s+/g, '');
     const errors = {
       cardNumber: !cardNumberCleaned || !/^\d{16}$/.test(cardNumberCleaned) ? 'Card number must be 16 digits' : '',
@@ -330,7 +317,6 @@ const Checkout = () => {
         setOrderReference(result.orderReference);
         setPaymentStatus('success');
         
-        // Clear cart and redirect after a short delay
         setTimeout(() => {
           clearCart();
           navigate('/order-confirmation', { 
@@ -353,7 +339,6 @@ const Checkout = () => {
     }
   };
   
-  // Process mobile money payment
   const processMobileMoneyPayment = async () => {
     if (!formData.momoNumber) {
       toast({
@@ -400,7 +385,6 @@ const Checkout = () => {
     }
   };
   
-  // Verify mobile money code
   const verifyMomoCode = async () => {
     if (!momoVerificationCode) {
       toast({
@@ -430,7 +414,6 @@ const Checkout = () => {
         setOrderReference(result.orderReference);
         setPaymentStatus('success');
         
-        // Clear cart and redirect after a short delay
         setTimeout(() => {
           clearCart();
           navigate('/order-confirmation', { 
@@ -453,7 +436,6 @@ const Checkout = () => {
     }
   };
   
-  // Send ETH payment via MetaMask
   const sendCryptoPayment = async () => {
     if (!isConnected) {
       toast({
@@ -481,7 +463,6 @@ const Checkout = () => {
           description: `Transaction has been submitted: ${result.transactionId?.slice(0, 10)}...${result.transactionId?.slice(-8)}`,
         });
         
-        // Handle successful order after a short delay
         setTimeout(() => {
           clearCart();
           navigate('/order-confirmation', { 
@@ -517,11 +498,37 @@ const Checkout = () => {
     }
   };
   
-  // Handle form submission
+  const handlePaymentSuccess = (result: { 
+    success: boolean; 
+    orderReference: string; 
+    transactionId?: string; 
+  }) => {
+    setOrderReference(result.orderReference);
+    setPaymentStatus('success');
+    
+    setTimeout(() => {
+      clearCart();
+      navigate('/order-confirmation', { 
+        state: { 
+          orderReference: result.orderReference,
+          paymentMethod,
+          transactionId: result.transactionId,
+          items: getOrderDetails().items,
+          totalAmount: getTotalPrice(),
+          shipping: getTotalPrice() > 0 ? 4.99 : 0,
+          customerInfo: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email
+          }
+        } 
+      });
+    }, 1500);
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Process payment based on selected method
     switch (paymentMethod) {
       case 'credit_card':
         processCreditCardPayment();
@@ -539,16 +546,17 @@ const Checkout = () => {
         if (isMetaMaskInstalled && isConnected) {
           sendCryptoPayment();
         } else if (isMetaMaskInstalled) {
-          // If MetaMask is installed but not connected
           connectWallet();
         } else {
-          // Handle manual crypto payment (show instructions)
           toast({
             title: "MetaMask not installed",
             description: "Please install MetaMask browser extension to pay with Ethereum.",
             variant: "destructive"
           });
         }
+        break;
+        
+      case 'stripe':
         break;
         
       default:
@@ -564,7 +572,6 @@ const Checkout = () => {
   const shipping = totalPrice > 0 ? 4.99 : 0;
   const orderTotal = totalPrice + shipping;
   
-  // Check if cart is empty and redirect to cart page if it is
   if (items.length === 0) {
     return (
       <>
@@ -599,7 +606,6 @@ const Checkout = () => {
           <h1 className="text-3xl md:text-4xl font-bold mb-8">Checkout</h1>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Checkout Form */}
             <div className="lg:col-span-2">
               <form onSubmit={handleSubmit}>
                 <div className="bg-card rounded-xl shadow-sm overflow-hidden mb-6">
@@ -750,11 +756,16 @@ const Checkout = () => {
                     <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
                     
                     <Tabs defaultValue="credit_card" onValueChange={(value) => setPaymentMethod(value as PaymentMethod)} className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
+                      <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="credit_card" className="flex items-center">
                           <CreditCard className="mr-2 h-4 w-4" />
                           <span className="hidden sm:inline">Credit Card</span>
                           <span className="sm:hidden">Card</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="stripe" className="flex items-center">
+                          <StripeIcon className="mr-2 h-4 w-4" />
+                          <span className="hidden sm:inline">Stripe</span>
+                          <span className="sm:hidden">Stripe</span>
                         </TabsTrigger>
                         <TabsTrigger value="mobile_money" className="flex items-center">
                           <Smartphone className="mr-2 h-4 w-4" />
@@ -820,7 +831,6 @@ const Checkout = () => {
                             </div>
                           </div>
                           
-                          {/* Payment status messages */}
                           {paymentMethod === 'credit_card' && paymentStatus === 'success' && (
                             <Alert className="bg-green-50 border-green-300">
                               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -843,13 +853,22 @@ const Checkout = () => {
                         </div>
                       </TabsContent>
                       
+                      <TabsContent value="stripe" className="pt-4">
+                        <StripePayment 
+                          orderDetails={getOrderDetails()}
+                          onSuccess={handlePaymentSuccess}
+                          isProcessing={isPaymentProcessing}
+                          setIsProcessing={setIsPaymentProcessing}
+                        />
+                      </TabsContent>
+                      
                       <TabsContent value="mobile_money" className="pt-4">
                         <div className="space-y-4">
                           {!momoVerificationSent ? (
                             <>
                               <div className="space-y-4">
                                 <div className="space-y-2">
-                                <Label htmlFor="momoProvider">Provider</Label>
+                                  <Label htmlFor="momoProvider">Provider</Label>
                                   <Select
                                     value={formData.momoProvider}
                                     onValueChange={(value) => setFormData(prev => ({ ...prev, momoProvider: value as 'mtn' | 'airtel' | 'tigo' }))}
@@ -926,27 +945,6 @@ const Checkout = () => {
                                 </Button>
                               </div>
                             </>
-                          )}
-                          
-                          {/* Payment status messages */}
-                          {paymentMethod === 'mobile_money' && paymentStatus === 'success' && (
-                            <Alert className="bg-green-50 border-green-300 mt-4">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                              <AlertTitle className="text-green-600">Payment Successful</AlertTitle>
-                              <AlertDescription>
-                                Payment processed successfully. Order reference: {orderReference}
-                              </AlertDescription>
-                            </Alert>
-                          )}
-                          
-                          {paymentMethod === 'mobile_money' && paymentStatus === 'error' && (
-                            <Alert className="bg-red-50 border-red-300 mt-4">
-                              <AlertCircle className="h-4 w-4 text-red-600" />
-                              <AlertTitle className="text-red-600">Payment Failed</AlertTitle>
-                              <AlertDescription>
-                                {paymentError || "There was an error processing your payment."}
-                              </AlertDescription>
-                            </Alert>
                           )}
                         </div>
                       </TabsContent>
@@ -1069,6 +1067,7 @@ const Checkout = () => {
                   className="w-full md:w-auto"
                   disabled={
                     isPaymentProcessing || 
+                    paymentMethod === 'stripe' ||
                     (paymentMethod === 'crypto' && isMetaMaskInstalled && !isConnected) || 
                     (paymentMethod === 'mobile_money' && momoVerificationSent && !momoVerificationCode)
                   }
@@ -1083,6 +1082,7 @@ const Checkout = () => {
                       {paymentMethod === 'credit_card' && <CreditCard className="mr-2 h-4 w-4" />}
                       {paymentMethod === 'mobile_money' && <Smartphone className="mr-2 h-4 w-4" />}
                       {paymentMethod === 'crypto' && <Bitcoin className="mr-2 h-4 w-4" />}
+                      {paymentMethod === 'stripe' && <StripeIcon className="mr-2 h-4 w-4" />}
                       {paymentMethod === 'mobile_money' && momoVerificationSent ? 'Verify & Pay' : 'Place Order'}
                     </>
                   )}
@@ -1090,7 +1090,6 @@ const Checkout = () => {
               </form>
             </div>
             
-            {/* Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-card rounded-xl shadow-sm overflow-hidden sticky top-24">
                 <div className="p-6">
