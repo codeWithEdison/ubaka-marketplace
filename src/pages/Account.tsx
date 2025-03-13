@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { mockOrders, OrderStatus, Order } from '@/lib/utils';
+import { mockOrders } from '@/lib/utils';
+import { OrderStatus, Order } from '@/components/OrderTracker';
 
 const getStatusClass = (status: OrderStatus): string => {
   switch (status) {
@@ -78,7 +79,6 @@ const Account = () => {
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
             
-            {/* Profile Tab */}
             <TabsContent value="profile">
               <Card>
                 <CardHeader>
@@ -181,7 +181,6 @@ const Account = () => {
               </Card>
             </TabsContent>
             
-            {/* Orders Tab */}
             <TabsContent value="orders">
               <Card>
                 <CardHeader>
@@ -193,7 +192,7 @@ const Account = () => {
                     <div className="text-center py-6">
                       <Package className="h-12 w-12 mx-auto text-muted-foreground" />
                       <p className="mt-2 text-muted-foreground">You haven't placed any orders yet.</p>
-                      <Link to="/products" className="mt-4 inline-block">
+                      <Link to="/products">
                         <Button>Start Shopping</Button>
                       </Link>
                     </div>
@@ -236,7 +235,6 @@ const Account = () => {
               </Card>
             </TabsContent>
             
-            {/* Tracking Tab */}
             <TabsContent value="tracking">
               <Card>
                 <CardHeader>
@@ -249,7 +247,6 @@ const Account = () => {
               </Card>
             </TabsContent>
             
-            {/* Settings Tab */}
             <TabsContent value="settings">
               <Card>
                 <CardHeader>

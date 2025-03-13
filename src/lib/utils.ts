@@ -17,12 +17,31 @@ export function getFallbackImageUrl(): string {
   return "https://placehold.co/600x600/EEE/31343C?text=Image+Not+Available";
 }
 
+// Define and export the OrderStatus type
+export type OrderStatus = "processing" | "shipped" | "out_for_delivery" | "delivered";
+
+// Define and export the Order interface
+export interface Order {
+  id: string;
+  date: string;
+  status: OrderStatus;
+  items: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }[];
+  total: number;
+  trackingNumber?: string;
+  estimatedDelivery?: string;
+}
+
 // Mock order data for the order tracking feature
-export const mockOrders = [
+export const mockOrders: Order[] = [
   {
     id: "ORD-2023-7845",
     date: "May 15, 2023",
-    status: "delivered" as const,
+    status: "delivered",
     items: [
       { id: "1", name: "Construction Helmet", price: 25000, quantity: 2 },
       { id: "2", name: "Safety Goggles", price: 15000, quantity: 1 },
@@ -34,7 +53,7 @@ export const mockOrders = [
   {
     id: "ORD-2023-6543",
     date: "June 10, 2023",
-    status: "shipped" as const,
+    status: "shipped",
     items: [
       { id: "3", name: "Power Drill", price: 120000, quantity: 1 },
       { id: "4", name: "Measuring Tape", price: 8000, quantity: 3 },
@@ -46,7 +65,7 @@ export const mockOrders = [
   {
     id: "ORD-2023-9876",
     date: "July 5, 2023",
-    status: "processing" as const,
+    status: "processing",
     items: [
       { id: "5", name: "Cement (50kg)", price: 12000, quantity: 10 },
       { id: "6", name: "Bricks (100 pcs)", price: 15000, quantity: 5 },

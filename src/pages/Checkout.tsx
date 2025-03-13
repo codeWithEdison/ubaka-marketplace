@@ -10,8 +10,7 @@ import {
   AlertCircle, 
   CheckCircle, 
   Loader2,
-  ChevronRight,
-  CreditCard as StripeIcon
+  ChevronRight
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +42,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import StripePayment from '@/components/StripePayment';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/utils';
 import paymentService, { 
@@ -556,9 +554,6 @@ const Checkout = () => {
         }
         break;
         
-      case 'stripe':
-        break;
-        
       default:
         toast({
           title: "Payment method not supported",
@@ -756,16 +751,11 @@ const Checkout = () => {
                     <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
                     
                     <Tabs defaultValue="credit_card" onValueChange={(value) => setPaymentMethod(value as PaymentMethod)} className="w-full">
-                      <TabsList className="grid w-full grid-cols-4">
+                      <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="credit_card" className="flex items-center">
                           <CreditCard className="mr-2 h-4 w-4" />
                           <span className="hidden sm:inline">Credit Card</span>
                           <span className="sm:hidden">Card</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="stripe" className="flex items-center">
-                          <StripeIcon className="mr-2 h-4 w-4" />
-                          <span className="hidden sm:inline">Stripe</span>
-                          <span className="sm:hidden">Stripe</span>
                         </TabsTrigger>
                         <TabsTrigger value="mobile_money" className="flex items-center">
                           <Smartphone className="mr-2 h-4 w-4" />
@@ -851,15 +841,6 @@ const Checkout = () => {
                             </Alert>
                           )}
                         </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="stripe" className="pt-4">
-                        <StripePayment 
-                          orderDetails={getOrderDetails()}
-                          onSuccess={handlePaymentSuccess}
-                          isProcessing={isPaymentProcessing}
-                          setIsProcessing={setIsPaymentProcessing}
-                        />
                       </TabsContent>
                       
                       <TabsContent value="mobile_money" className="pt-4">
@@ -1067,7 +1048,6 @@ const Checkout = () => {
                   className="w-full md:w-auto"
                   disabled={
                     isPaymentProcessing || 
-                    paymentMethod === 'stripe' ||
                     (paymentMethod === 'crypto' && isMetaMaskInstalled && !isConnected) || 
                     (paymentMethod === 'mobile_money' && momoVerificationSent && !momoVerificationCode)
                   }
@@ -1082,7 +1062,6 @@ const Checkout = () => {
                       {paymentMethod === 'credit_card' && <CreditCard className="mr-2 h-4 w-4" />}
                       {paymentMethod === 'mobile_money' && <Smartphone className="mr-2 h-4 w-4" />}
                       {paymentMethod === 'crypto' && <Bitcoin className="mr-2 h-4 w-4" />}
-                      {paymentMethod === 'stripe' && <StripeIcon className="mr-2 h-4 w-4" />}
                       {paymentMethod === 'mobile_money' && momoVerificationSent ? 'Verify & Pay' : 'Place Order'}
                     </>
                   )}
