@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { mockOrders } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Package, Eye } from 'lucide-react';
+import { OrderStatus } from '@/components/OrderTracker';
 
 const Account = () => {
   const { toast } = useToast();
@@ -82,6 +83,36 @@ const Account = () => {
 
   const handleViewOrder = (orderId: string) => {
     setSelectedOrderId(orderId);
+  };
+
+  // Helper function to get status display class
+  const getStatusClass = (status: OrderStatus) => {
+    switch (status) {
+      case "delivered":
+        return "bg-green-100 text-green-800";
+      case "shipped":
+      case "out_for_delivery":
+        return "bg-blue-100 text-blue-800";
+      case "processing":
+      default:
+        return "bg-yellow-100 text-yellow-800";
+    }
+  };
+
+  // Helper function to get status display text
+  const getStatusText = (status: OrderStatus) => {
+    switch (status) {
+      case "processing":
+        return "Processing";
+      case "shipped":
+        return "Shipped";
+      case "out_for_delivery":
+        return "Out for Delivery";
+      case "delivered":
+        return "Delivered";
+      default:
+        return "Unknown";
+    }
   };
 
   return (
@@ -170,17 +201,8 @@ const Account = () => {
                                 <TableCell className="font-medium">{order.id}</TableCell>
                                 <TableCell>{order.date}</TableCell>
                                 <TableCell>
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    order.status === 'delivered' 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : order.status === 'shipped' || order.status === 'out_for_delivery'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-yellow-100 text-yellow-800'
-                                  }`}>
-                                    {order.status === 'processing' && 'Processing'}
-                                    {order.status === 'shipped' && 'Shipped'}
-                                    {order.status === 'out_for_delivery' && 'Out for Delivery'}
-                                    {order.status === 'delivered' && 'Delivered'}
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status)}`}>
+                                    {getStatusText(order.status)}
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-right">
