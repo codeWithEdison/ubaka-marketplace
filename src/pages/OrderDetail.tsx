@@ -1,35 +1,38 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, Package, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, Package, ArrowLeft, ArrowLeftRight } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import OrderTracker, { Order } from '@/components/OrderTracker';
-import { mockOrders } from '@/lib/utils';
-import { formatCurrency } from '@/lib/utils';
+import ReturnItemForm from '@/components/order/ReturnItemForm';
+import { mockOrders, formatCurrency } from '@/lib/utils';
+import { canReturnOrder, getReturnRequestsForOrder, ReturnRequest } from '@/lib/returnUtils';
 
 const OrderDetail = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([]);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [canReturn, setCanReturn] = useState(false);
 
   useEffect(() => {
-    // In a real app, you would fetch the order from your API
-    // This is a mock implementation
     const fetchOrder = async () => {
       setLoading(true);
       try {
-        // Find the order in our mock data
         const foundOrder = mockOrders.find(order => order.id === orderId);
         
-        // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
         if (foundOrder) {
           setOrder(foundOrder);
+          
+          setCanReturn(canReturnOrder(foundOrder.status, foundOrder.date));
+          
+          setReturnRequests(getReturnRequestsForOrder(foundOrder.id));
         }
       } catch (error) {
         console.error('Error fetching order:', error);
@@ -40,6 +43,14 @@ const OrderDetail = () => {
 
     fetchOrder();
   }, [orderId]);
+
+  const handleReturnSuccess = () => {
+    setShowReturnForm(false);
+    
+    if (order) {
+      setReturnRequests(getReturnRequestsForOrder(order.id));
+    }
+  };
 
   if (loading) {
     return (
@@ -108,10 +119,69 @@ const OrderDetail = () => {
             </div>
           </div>
 
-          {/* Order Tracker */}
           <OrderTracker order={order} />
+          
+          {showReturnForm ? (
+            <div className="mb-6">
+              <ReturnItemForm 
+                order={order} 
+                onSuccess={handleReturnSuccess}
+                onCancel={() => setShowReturnForm(false)}
+              />
+            </div>
+          ) : canReturn && (
+            <div className="mb-6 p-4 bg-muted rounded-xl text-center">
+              <p className="mb-2">
+                Not satisfied with your purchase? You can return items within 30 days of delivery.
+              </p>
+              <Button onClick={() => setShowReturnForm(true)}>
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                Request a Return
+              </Button>
+            </div>
+          )}
+          
+          {returnRequests.length > 0 && (
+            <Card className="p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4">Return Requests</h2>
+              <div className="space-y-4">
+                {returnRequests.map(request => {
+                  const item = order.items.find(item => item.id === request.productId);
+                  
+                  return (
+                    <div key={request.id} className="p-4 border rounded-md">
+                      <div className="flex justify-between">
+                        <div>
+                          <p className="font-medium">{item?.name || 'Product'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Quantity: {request.quantity} • 
+                            Reason: {request.reason.replace('_', ' ')}
+                          </p>
+                          {request.description && (
+                            <p className="text-sm mt-1">{request.description}</p>
+                          )}
+                        </div>
+                        <div>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                          </span>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Requested: {request.requestDate}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
 
-          {/* Order Details */}
           <Card className="p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Order Details</h2>
             

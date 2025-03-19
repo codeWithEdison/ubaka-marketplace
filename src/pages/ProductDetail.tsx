@@ -1,7 +1,6 @@
-
 import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowLeft, ShoppingCart, Star, Clock, Check, Info } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Star, Clock, Check, Info, MessageSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -13,9 +12,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import ReviewList from '@/components/product/ReviewList';
+import AddReviewForm from '@/components/product/AddReviewForm';
 import { useCart } from '@/contexts/CartContext';
 import { getProductById, Product } from '@/lib/data';
 import { formatCurrency, getFallbackImageUrl } from '@/lib/utils';
+import { getReviewsForProduct } from '@/lib/reviewUtils';
 import { useToast } from "@/hooks/use-toast";
 
 const ProductDetail = () => {
@@ -24,9 +26,11 @@ const ProductDetail = () => {
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [isImageError, setIsImageError] = useState(false);
-  
+  const [showAddReview, setShowAddReview] = useState(false);
+  const [reviewsKey, setReviewsKey] = useState(0);
+
   const product = getProductById(productId || '');
-  
+
   if (!product) {
     return (
       <>
@@ -57,21 +61,28 @@ const ProductDetail = () => {
       description: `${quantity} × ${product.name} added to your cart`,
     });
   };
-  
+
   const increaseQuantity = () => setQuantity(prev => prev + 1);
   const decreaseQuantity = () => setQuantity(prev => prev > 1 ? prev - 1 : 1);
-  
+
   const handleImageError = () => {
     setIsImageError(true);
   };
-  
+
   const imageUrl = isImageError 
     ? getFallbackImageUrl() 
-    : product.image;
-  
-  const discountedPrice = product.discount
-    ? product.price * (1 - product.discount / 100)
-    : product.price;
+    : product!.image;
+
+  const discountedPrice = product!.discount
+    ? product!.price * (1 - product!.discount / 100)
+    : product!.price;
+
+  const reviewCount = getReviewsForProduct(productId || '').length;
+
+  const handleReviewAdded = () => {
+    setShowAddReview(false);
+    setReviewsKey(prev => prev + 1);
+  };
 
   return (
     <>
@@ -85,7 +96,6 @@ const ProductDetail = () => {
           </Link>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-            {/* Product Image */}
             <div className="bg-card rounded-xl overflow-hidden">
               <img 
                 src={imageUrl} 
@@ -95,7 +105,6 @@ const ProductDetail = () => {
               />
             </div>
             
-            {/* Product Information */}
             <div className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -199,9 +208,12 @@ const ProductDetail = () => {
           </div>
           
           <Tabs defaultValue="details" className="mt-8">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="specifications">Specifications</TabsTrigger>
+              <TabsTrigger value="reviews">
+                Reviews ({reviewCount})
+              </TabsTrigger>
               <TabsTrigger value="shipping">Shipping & Returns</TabsTrigger>
             </TabsList>
             
@@ -237,8 +249,38 @@ const ProductDetail = () => {
               )}
             </TabsContent>
             
+            <TabsContent value="reviews" className="p-6 bg-card rounded-xl mt-4">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold">Customer Reviews</h3>
+                
+                {!showAddReview && (
+                  <Button onClick={() => setShowAddReview(true)}>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Write a Review
+                  </Button>
+                )}
+              </div>
+              
+              {showAddReview ? (
+                <div className="mb-8 p-4 border rounded-lg bg-muted/50">
+                  <h4 className="font-medium mb-4">Write Your Review</h4>
+                  <AddReviewForm 
+                    productId={productId || ''} 
+                    onReviewAdded={handleReviewAdded} 
+                  />
+                  <div className="mt-4 text-right">
+                    <Button variant="ghost" onClick={() => setShowAddReview(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+              
+              <ReviewList key={reviewsKey} productId={productId || ''} />
+            </TabsContent>
+            
             <TabsContent value="shipping" className="p-6 bg-card rounded-xl mt-4">
-              <h3 className="text-lg font-semibold mb-3">Shipping Information</h3>
+              <h3 className="text-lg font-semibold mb-3">Shipping & Returns Information</h3>
               
               <div className="space-y-4">
                 <div>
@@ -253,7 +295,13 @@ const ProductDetail = () => {
                 
                 <div>
                   <h4 className="font-medium mb-1">Returns:</h4>
-                  <p className="text-muted-foreground">Products can be returned within 30 days of delivery for a full refund or exchange.</p>
+                  <p className="text-muted-foreground">Products can be returned within 30 days of delivery for a full refund or exchange. Visit your account page to initiate a return.</p>
+                  <ul className="list-disc list-inside mt-2 text-muted-foreground text-sm">
+                    <li>Items must be in original condition</li>
+                    <li>Include original packaging and accessories</li>
+                    <li>Provide proof of purchase</li>
+                    <li>Return shipping fees may apply</li>
+                  </ul>
                 </div>
               </div>
             </TabsContent>

@@ -3,26 +3,34 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, ShoppingCart, Plus, Minus, ArrowRight } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import CouponForm from '@/components/cart/CouponForm';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/utils';
+import { Coupon, calculateDiscountAmount } from '@/lib/couponUtils';
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, getTotalPrice } = useCart();
-  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   
-  const handleCouponSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real app, we would validate the coupon code here
-    alert(`Coupon ${couponCode} applied!`);
+  const subtotal = getTotalPrice();
+  const shipping = subtotal > 0 ? 4.99 : 0;
+  
+  const discountAmount = appliedCoupon 
+    ? calculateDiscountAmount(appliedCoupon, subtotal, items.map(item => item.product))
+    : 0;
+  
+  const orderTotal = subtotal - discountAmount + shipping;
+
+  const handleApplyCoupon = (coupon: Coupon) => {
+    setAppliedCoupon(coupon);
   };
   
-  const totalPrice = getTotalPrice();
-  const shipping = totalPrice > 0 ? 4.99 : 0;
-  const orderTotal = totalPrice + shipping;
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+  };
 
   return (
     <>
@@ -147,25 +155,27 @@ const Cart = () => {
                     <div className="space-y-4">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
-                        <span>{formatCurrency(totalPrice)}</span>
+                        <span>{formatCurrency(subtotal)}</span>
                       </div>
+                      
+                      {discountAmount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Discount ({appliedCoupon?.discount}%)</span>
+                          <span>-{formatCurrency(discountAmount)}</span>
+                        </div>
+                      )}
                       
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Shipping</span>
                         <span>{shipping > 0 ? formatCurrency(shipping) : 'Free'}</span>
                       </div>
                       
-                      <form onSubmit={handleCouponSubmit} className="flex gap-2">
-                        <Input
-                          placeholder="Coupon code"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value)}
-                          className="flex-1"
-                        />
-                        <Button type="submit" variant="outline" disabled={!couponCode}>
-                          Apply
-                        </Button>
-                      </form>
+                      <CouponForm 
+                        onApplyCoupon={handleApplyCoupon}
+                        onRemoveCoupon={handleRemoveCoupon}
+                        appliedCoupon={appliedCoupon}
+                        subtotal={subtotal}
+                      />
                       
                       <Separator />
                       
