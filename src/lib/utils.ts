@@ -1,3 +1,10 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 export const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-RW', {
     style: 'currency',
@@ -26,7 +33,6 @@ export interface Order {
   estimatedDelivery?: string;
 }
 
-// Mock orders for demo
 export const mockOrders: Order[] = [
   {
     id: "ORD-2023-001",
@@ -87,6 +93,7 @@ export const mockOrders: Order[] = [
     total: 244.80
   }
 ];
+
 export interface Product {
   id: string;
   name: string;
@@ -308,13 +315,11 @@ export const categories: Category[] = [
   },
 ];
 
-// For managing shopping cart data
 export interface CartItem {
   product: Product;
   quantity: number;
 }
 
-// Helpers for cart management
 export const getProductById = (id: string): Product | undefined => {
   return products.find(product => product.id === id);
 };
