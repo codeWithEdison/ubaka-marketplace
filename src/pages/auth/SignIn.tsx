@@ -1,42 +1,43 @@
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn, isLoading } = useAuth();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+
+  const from = (location.state as any)?.from?.pathname || "/account";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
 
     try {
-      // Here you would typically authenticate with your backend
-      // For demo purposes, we're just simulating a successful login
-      console.log("Logging in with:", { email, password, rememberMe });
+      const { error } = await signIn(email, password);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (error) {
+        setError(error.message);
+        return;
+      }
       
-      // Mock successful login
-      localStorage.setItem("isAuthenticated", "true");
-      navigate("/account");
-    } catch (error) {
-      setError("Invalid email or password. Please try again.");
-    } finally {
-      setIsLoading(false);
+      navigate(from);
+    } catch (error: any) {
+      setError(error.message || "An unexpected error occurred");
     }
   };
 
@@ -98,7 +99,12 @@ const SignIn = () => {
             </div>
             
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : "Sign in"}
             </Button>
           </form>
           

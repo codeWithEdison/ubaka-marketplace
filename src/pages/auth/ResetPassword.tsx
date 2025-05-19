@@ -1,17 +1,17 @@
 
-import { useState } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
   
   const [formData, setFormData] = useState({
     password: "",
@@ -20,6 +20,15 @@ const ResetPassword = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [hash, setHash] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Extract hash from URL - Supabase adds it automatically
+    const hashFragment = window.location.hash;
+    if (hashFragment) {
+      setHash(hashFragment.substring(1));
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -31,13 +40,6 @@ const ResetPassword = () => {
     setIsLoading(true);
     setError("");
 
-    // Validate token
-    if (!token) {
-      setError("Invalid password reset token");
-      setIsLoading(false);
-      return;
-    }
-
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords don't match");
@@ -46,15 +48,13 @@ const ResetPassword = () => {
     }
 
     try {
-      // Here you would typically handle the password reset with your backend using the token
-      console.log("Resetting password with token:", token);
+      const { error } = await supabase.auth.updateUser({ password: formData.password });
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (error) throw error;
       
       setIsSubmitted(true);
-    } catch (error) {
-      setError("Failed to reset password. Please try again.");
+    } catch (error: any) {
+      setError(error.message || "Failed to reset password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -112,9 +112,22 @@ const ResetPassword = () => {
                 />
               </div>
               
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Resetting password..." : "Reset password"}
+              <Button type="submit" className="w-full" disabled={isLoading || !hash}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Resetting password...
+                  </>
+                ) : "Reset password"}
               </Button>
+              
+              {!hash && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>
+                    Invalid password reset link. Please request a new password reset link.
+                  </AlertDescription>
+                </Alert>
+              )}
             </form>
           )}
         </CardContent>

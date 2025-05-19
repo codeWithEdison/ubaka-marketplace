@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./contexts/CartContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import AuthGuard from "./components/auth/AuthGuard";
 
 import Index from "./pages/Index";
@@ -35,48 +36,54 @@ import ResetPassword from "./pages/auth/ResetPassword";
 
 const queryClient = new QueryClient();
 
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<Index />} />
+    <Route path="/products" element={<Products />} />
+    <Route path="/products/:productId" element={<ProductDetail />} />
+    <Route path="/categories" element={<Categories />} />
+    <Route path="/categories/:categoryId" element={<CategoryDetail />} />
+    <Route path="/services" element={<Services />} />
+    <Route path="/about" element={<About />} />
+    <Route path="/contact" element={<Contact />} />
+    
+    {/* Protected routes */}
+    <Route path="/account" element={<AuthGuard><Account /></AuthGuard>} />
+    <Route path="/orders/:orderId" element={<AuthGuard><OrderDetail /></AuthGuard>} />
+    <Route path="/cart" element={<Cart />} />
+    <Route path="/checkout" element={<AuthGuard><Checkout /></AuthGuard>} />
+    <Route path="/order-confirmation" element={<AuthGuard><OrderConfirmation /></AuthGuard>} />
+    
+    {/* Auth routes */}
+    <Route path="/auth/sign-in" element={<SignIn />} />
+    <Route path="/auth/sign-up" element={<SignUp />} />
+    <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+    <Route path="/auth/reset-password" element={<ResetPassword />} />
+    
+    {/* Admin routes */}
+    <Route path="/admin" element={<AuthGuard><Admin /></AuthGuard>} />
+    <Route path="/admin/products" element={<AuthGuard><AdminProducts /></AuthGuard>} />
+    <Route path="/admin/categories" element={<AuthGuard><AdminCategories /></AuthGuard>} />
+    <Route path="/admin/orders" element={<AuthGuard><AdminOrders /></AuthGuard>} />
+    <Route path="/admin/supply-chain" element={<AuthGuard><AdminSupplyChain /></AuthGuard>} />
+    
+    {/* Catch-all route */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <CartProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/products/:productId" element={<ProductDetail />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/categories/:categoryId" element={<CategoryDetail />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            
-            {/* Protected routes */}
-            <Route path="/account" element={<AuthGuard><Account /></AuthGuard>} />
-            <Route path="/orders/:orderId" element={<AuthGuard><OrderDetail /></AuthGuard>} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<AuthGuard><Checkout /></AuthGuard>} />
-            <Route path="/order-confirmation" element={<AuthGuard><OrderConfirmation /></AuthGuard>} />
-            
-            {/* Auth routes */}
-            <Route path="/auth/sign-in" element={<SignIn />} />
-            <Route path="/auth/sign-up" element={<SignUp />} />
-            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-            <Route path="/auth/reset-password" element={<ResetPassword />} />
-            
-            {/* Admin routes */}
-            <Route path="/admin" element={<AuthGuard><Admin /></AuthGuard>} />
-            <Route path="/admin/products" element={<AuthGuard><AdminProducts /></AuthGuard>} />
-            <Route path="/admin/categories" element={<AuthGuard><AdminCategories /></AuthGuard>} />
-            <Route path="/admin/orders" element={<AuthGuard><AdminOrders /></AuthGuard>} />
-            <Route path="/admin/supply-chain" element={<AuthGuard><AdminSupplyChain /></AuthGuard>} />
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </CartProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <CartProvider>
+            <Toaster />
+            <Sonner />
+            <AppRoutes />
+          </CartProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

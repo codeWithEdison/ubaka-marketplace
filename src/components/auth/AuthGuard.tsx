@@ -1,6 +1,8 @@
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2 } from "lucide-react";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -8,23 +10,20 @@ interface AuthGuardProps {
 
 const AuthGuard = ({ children }: AuthGuardProps) => {
   const location = useLocation();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    // Check if user is authenticated
-    // This is a simple example using localStorage
-    // In a real app, you would use a more secure method
-    const authStatus = localStorage.getItem("isAuthenticated") === "true";
-    setIsAuthenticated(authStatus);
-  }, []);
+  const { user, isLoading } = useAuth();
 
   // Still checking authentication status
-  if (isAuthenticated === null) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Checking authentication...</span>
+      </div>
+    );
   }
 
   // If not authenticated, redirect to sign-in page
-  if (!isAuthenticated) {
+  if (!user) {
     return <Navigate to="/auth/sign-in" state={{ from: location }} replace />;
   }
 

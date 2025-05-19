@@ -6,10 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const { signUp, isLoading } = useAuth();
+  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -18,7 +22,6 @@ const SignUp = () => {
     confirmPassword: ""
   });
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -27,30 +30,32 @@ const SignUp = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords don't match");
-      setIsLoading(false);
       return;
     }
 
     try {
-      // Here you would typically register with your backend
-      console.log("Registering with:", formData);
+      const { error } = await signUp(
+        formData.email,
+        formData.password,
+        {
+          first_name: formData.firstName,
+          last_name: formData.lastName
+        }
+      );
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (error) {
+        setError(error.message);
+        return;
+      }
       
-      // Mock successful registration
-      localStorage.setItem("isAuthenticated", "true");
       navigate("/account");
-    } catch (error) {
-      setError("Registration failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      setError(error.message || "An unexpected error occurred");
     }
   };
 
@@ -134,7 +139,12 @@ const SignUp = () => {
             </div>
             
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Sign up"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : "Sign up"}
             </Button>
           </form>
           

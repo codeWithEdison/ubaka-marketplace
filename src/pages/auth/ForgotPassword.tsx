@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -20,15 +22,15 @@ const ForgotPassword = () => {
     setError("");
 
     try {
-      // Here you would typically handle password reset with your backend
-      console.log("Requesting password reset for:", email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (error) throw error;
       
       setIsSubmitted(true);
-    } catch (error) {
-      setError("Failed to process your request. Please try again.");
+    } catch (error: any) {
+      setError(error.message || "Failed to process your request. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +75,12 @@ const ForgotPassword = () => {
               </div>
               
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Submitting..." : "Send reset link"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : "Send reset link"}
               </Button>
               
               <div className="text-center">
