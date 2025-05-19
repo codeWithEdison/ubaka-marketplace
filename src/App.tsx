@@ -61,11 +61,11 @@ const AppRoutes = () => (
     <Route path="/auth/reset-password" element={<ResetPassword />} />
     
     {/* Admin routes */}
-    <Route path="/admin" element={<AuthGuard><Admin /></AuthGuard>} />
-    <Route path="/admin/products" element={<AuthGuard><AdminProducts /></AuthGuard>} />
-    <Route path="/admin/categories" element={<AuthGuard><AdminCategories /></AuthGuard>} />
-    <Route path="/admin/orders" element={<AuthGuard><AdminOrders /></AuthGuard>} />
-    <Route path="/admin/supply-chain" element={<AuthGuard><AdminSupplyChain /></AuthGuard>} />
+    <Route path="/admin" element={<AuthGuard requireAdmin={true}><Admin /></AuthGuard>} />
+    <Route path="/admin/products" element={<AuthGuard requireAdmin={true}><AdminProducts /></AuthGuard>} />
+    <Route path="/admin/categories" element={<AuthGuard requireAdmin={true}><AdminCategories /></AuthGuard>} />
+    <Route path="/admin/orders" element={<AuthGuard requireAdmin={true}><AdminOrders /></AuthGuard>} />
+    <Route path="/admin/supply-chain" element={<AuthGuard requireAdmin={true}><AdminSupplyChain /></AuthGuard>} />
     
     {/* Catch-all route */}
     <Route path="*" element={<NotFound />} />

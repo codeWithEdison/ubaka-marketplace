@@ -82,6 +82,132 @@ export type Database = {
           },
         ]
       }
+      coupon_uses: {
+        Row: {
+          coupon_id: string
+          created_at: string
+          discount_amount: number
+          id: string
+          order_id: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string
+          discount_amount: number
+          id?: string
+          order_id: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string
+          discount_amount?: number
+          id?: string
+          order_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_uses_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_uses_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          current_uses: number | null
+          description: string | null
+          discount_value: number | null
+          id: string
+          is_active: boolean | null
+          max_discount_amount: number | null
+          max_uses: number | null
+          min_purchase_amount: number | null
+          type: Database["public"]["Enums"]["coupon_type"]
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_uses?: number | null
+          description?: string | null
+          discount_value?: number | null
+          id?: string
+          is_active?: boolean | null
+          max_discount_amount?: number | null
+          max_uses?: number | null
+          min_purchase_amount?: number | null
+          type: Database["public"]["Enums"]["coupon_type"]
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_uses?: number | null
+          description?: string | null
+          discount_value?: number | null
+          id?: string
+          is_active?: boolean | null
+          max_discount_amount?: number | null
+          max_uses?: number | null
+          min_purchase_amount?: number | null
+          type?: Database["public"]["Enums"]["coupon_type"]
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -131,6 +257,7 @@ export type Database = {
           id: string
           notes: string | null
           payment_intent_id: string | null
+          payment_method: string | null
           shipping_address: Json
           status: Database["public"]["Enums"]["order_status"]
           total: number
@@ -144,6 +271,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_intent_id?: string | null
+          payment_method?: string | null
           shipping_address: Json
           status?: Database["public"]["Enums"]["order_status"]
           total: number
@@ -157,6 +285,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_intent_id?: string | null
+          payment_method?: string | null
           shipping_address?: Json
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
@@ -270,6 +399,145 @@ export type Database = {
         }
         Relationships: []
       }
+      return_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          description: string | null
+          id: string
+          order_id: string
+          product_id: string
+          quantity: number
+          reason: Database["public"]["Enums"]["return_reason"]
+          refund_amount: number | null
+          status: Database["public"]["Enums"]["return_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id: string
+          product_id: string
+          quantity: number
+          reason: Database["public"]["Enums"]["return_reason"]
+          refund_amount?: number | null
+          status?: Database["public"]["Enums"]["return_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          reason?: Database["public"]["Enums"]["return_reason"]
+          refund_amount?: number | null
+          status?: Database["public"]["Enums"]["return_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_votes: {
+        Row: {
+          created_at: string
+          id: string
+          is_helpful: boolean
+          review_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_helpful: boolean
+          review_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_helpful?: boolean
+          review_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_votes_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          is_approved: boolean | null
+          is_verified_purchase: boolean | null
+          product_id: string
+          rating: number
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          is_verified_purchase?: boolean | null
+          product_id: string
+          rating: number
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          is_verified_purchase?: boolean | null
+          product_id?: string
+          rating?: number
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -296,7 +564,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      product_ratings: {
+        Row: {
+          average_rating: number | null
+          product_id: string | null
+          review_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
@@ -305,12 +588,25 @@ export type Database = {
       }
     }
     Enums: {
+      coupon_type: "percentage" | "fixed_amount" | "free_shipping"
+      notification_type:
+        | "order_status"
+        | "return_status"
+        | "system"
+        | "promotion"
       order_status:
         | "pending"
         | "processing"
         | "shipped"
         | "delivered"
         | "cancelled"
+      return_reason:
+        | "damaged"
+        | "wrong_item"
+        | "not_as_described"
+        | "changed_mind"
+        | "other"
+      return_status: "pending" | "approved" | "rejected" | "completed"
       user_role: "user" | "admin" | "moderator"
     }
     CompositeTypes: {
@@ -427,6 +723,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      coupon_type: ["percentage", "fixed_amount", "free_shipping"],
+      notification_type: [
+        "order_status",
+        "return_status",
+        "system",
+        "promotion",
+      ],
       order_status: [
         "pending",
         "processing",
@@ -434,6 +737,14 @@ export const Constants = {
         "delivered",
         "cancelled",
       ],
+      return_reason: [
+        "damaged",
+        "wrong_item",
+        "not_as_described",
+        "changed_mind",
+        "other",
+      ],
+      return_status: ["pending", "approved", "rejected", "completed"],
       user_role: ["user", "admin", "moderator"],
     },
   },
