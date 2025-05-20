@@ -25,7 +25,7 @@ export const fetchReviewsForProduct = async (productId: string) => {
     .from('reviews')
     .select(`
       *,
-      user_id (
+      user_id:profiles(
         id,
         first_name,
         last_name,
@@ -48,10 +48,10 @@ export const fetchReviewsForProduct = async (productId: string) => {
     
     // Safely access the nested user data
     const userData = review.user_id || {};
-    const userId = typeof userData === 'object' ? userData.id : review.user_id;
-    const firstName = typeof userData === 'object' ? userData.first_name || '' : '';
-    const lastName = typeof userData === 'object' ? userData.last_name || '' : '';
-    const avatarUrl = typeof userData === 'object' ? userData.avatar_url : null;
+    const userId = typeof userData === 'object' ? (userData as any).id : review.user_id;
+    const firstName = typeof userData === 'object' ? (userData as any).first_name || '' : '';
+    const lastName = typeof userData === 'object' ? (userData as any).last_name || '' : '';
+    const avatarUrl = typeof userData === 'object' ? (userData as any).avatar_url : null;
     
     return {
       id: review.id,
@@ -170,12 +170,17 @@ export const voteReview = async (reviewId: string, isHelpful: boolean) => {
 
 // Update product rating based on reviews
 export const updateProductRating = async (productId: string) => {
-  const { data, error } = await supabase
-    .rpc('calculate_product_rating', { product_id: productId });
+  try {
+    const { data, error } = await supabase
+      .rpc('calculate_product_rating', { product_id: productId });
+      
+    if (error) {
+      console.error('Error calculating product rating:', error);
+    }
     
-  if (error) {
-    console.error('Error calculating product rating:', error);
+    return data;
+  } catch (error) {
+    console.error('Failed to calculate product rating:', error);
+    return null;
   }
-  
-  return data;
 };

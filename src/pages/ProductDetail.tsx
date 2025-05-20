@@ -13,13 +13,14 @@ import { useCart } from '@/contexts/CartContext';
 import { fetchProductById } from '@/services/ProductService';
 import { fetchReviewsForProduct } from '@/services/ReviewService';
 import { useApiQuery } from '@/hooks/useApi';
+import { Product } from '@/lib/data';
 
 const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   
-  const { data: product, isLoading } = useApiQuery(
+  const { data: product, isLoading } = useApiQuery<Product>(
     ['product', productId as string],
     () => fetchProductById(productId as string),
     { enabled: !!productId }
@@ -99,10 +100,13 @@ const ProductDetail = () => {
                   <h1 className="text-3xl md:text-4xl font-bold">{product.name}</h1>
                   
                   <div className="mt-2 text-sm text-muted-foreground">
-                    <Link to={`/categories/${typeof product.category === 'object' ? product.category.id : '#'}`}>
-                      {typeof product.category === 'string' ? product.category : 
-                      (typeof product.category === 'object' && product.category ? product.category.name : 'Uncategorized')}
-                    </Link>
+                    {typeof product.category === 'object' && product.category ? (
+                      <Link to={`/categories/${product.category.id || '#'}`}>
+                        {product.category.name}
+                      </Link>
+                    ) : (
+                      <span>{typeof product.category === 'string' ? product.category : 'Uncategorized'}</span>
+                    )}
                   </div>
                   
                   <div className="mt-4 flex items-center">
@@ -181,7 +185,7 @@ const ProductDetail = () => {
                       {Object.entries(product.specifications).map(([key, value]) => (
                         <div key={key} className="flex justify-between py-2 border-b">
                           <span className="font-medium">{key}</span>
-                          <span className="text-muted-foreground">{value}</span>
+                          <span className="text-muted-foreground">{String(value)}</span>
                         </div>
                       ))}
                     </div>
@@ -192,7 +196,7 @@ const ProductDetail = () => {
               {/* Product Reviews */}
               <div className="mt-12">
                 <h2 className="text-2xl font-bold mb-6">Customer Reviews</h2>
-                <ReviewList reviews={reviews} />
+                <ReviewList productId={productId as string} />
                 <div className="mt-8">
                   <AddReviewForm productId={product.id} onReviewAdded={refetchReviews} />
                 </div>
