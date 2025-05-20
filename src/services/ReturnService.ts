@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { ReturnReason } from '@/lib/returnUtils';
+
+export type ReturnReason = 'damaged' | 'wrong_item' | 'not_as_described' | 'changed_mind' | 'other';
 
 export interface ReturnRequestInput {
   orderId: string;
@@ -11,6 +11,12 @@ export interface ReturnRequestInput {
 }
 
 export const createReturnRequest = async (returnData: ReturnRequestInput) => {
+  // Get the current authenticated user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Authentication required to create return request');
+  }
+
   // Validate the return (check order status, return window, etc.)
   const { data: order } = await supabase
     .from('orders')
@@ -44,7 +50,8 @@ export const createReturnRequest = async (returnData: ReturnRequestInput) => {
       quantity: returnData.quantity,
       reason: returnData.reason,
       description: returnData.description,
-      status: 'pending'
+      status: 'pending',
+      user_id: user.id
     })
     .select()
     .single();
@@ -61,13 +68,20 @@ export const createReturnRequest = async (returnData: ReturnRequestInput) => {
       data: { 
         return_id: data.id,
         order_id: returnData.orderId
-      }
+      },
+      user_id: user.id
     });
   
   return data;
 };
 
 export const fetchUserReturns = async (page = 1, limit = 10) => {
+  // Get the current authenticated user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Authentication required to view returns');
+  }
+
   const from = (page - 1) * limit;
   const to = from + limit - 1;
   
@@ -78,6 +92,7 @@ export const fetchUserReturns = async (page = 1, limit = 10) => {
       order:order_id (id, created_at),
       product:product_id (id, name, image_url, price)
     `, { count: 'exact' })
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .range(from, to);
     
@@ -109,6 +124,12 @@ export const fetchReturnById = async (returnId: string) => {
 };
 
 export const updateReturnStatus = async (returnId: string, status: string, adminNotes?: string, refundAmount?: number) => {
+  // Get the current authenticated user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Authentication required to update return status');
+  }
+
   const updateData: any = { status };
   
   if (adminNotes) {
@@ -128,6 +149,15 @@ export const updateReturnStatus = async (returnId: string, status: string, admin
     
   if (error) throw new Error(error.message);
   
+  // Get the return request to get the user_id
+  const { data: returnRequest } = await supabase
+    .from('return_requests')
+    .select('user_id')
+    .eq('id', returnId)
+    .single();
+
+  if (!returnRequest) throw new Error('Return request not found');
+  
   // Create notification for status change
   await supabase
     .from('notifications')
@@ -135,7 +165,8 @@ export const updateReturnStatus = async (returnId: string, status: string, admin
       type: 'return_status',
       title: `Return ${status.charAt(0).toUpperCase() + status.slice(1)}`,
       message: `Your return request #${returnId.substring(0, 8)} has been ${status}.`,
-      data: { return_id: returnId }
+      data: { return_id: returnId },
+      user_id: returnRequest.user_id
     });
   
   return data;

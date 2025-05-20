@@ -1,3 +1,4 @@
+
 import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { ArrowLeft, ShoppingCart, Star, Clock, Check, Info, MessageSquare } from 'lucide-react';
@@ -22,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();
-  const { addToCart } = useCart();
+  const { addItem } = useCart();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [isImageError, setIsImageError] = useState(false);
@@ -55,7 +56,7 @@ const ProductDetail = () => {
   }
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    addItem(product, quantity);
     toast({
       title: "Added to cart",
       description: `${quantity} × ${product.name} added to your cart`,

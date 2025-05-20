@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -20,6 +19,33 @@ export interface Category {
   description: string;
   image: string;
   count: number;
+}
+
+export interface ShippingAddress {
+  fullName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  items: CartItem[];
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  total: number;
+  shippingAddress: ShippingAddress;
+  createdAt: string;
+  updatedAt: string;
+  paymentIntentId?: string;
+  paymentMethod?: string;
+  trackingNumber?: string;
+  estimatedDelivery?: string;
+  notes?: string;
 }
 
 export const products: Product[] = [

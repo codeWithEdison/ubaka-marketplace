@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/lib/data';
 
@@ -20,7 +19,6 @@ export const fetchCategories = async () => {
     description: category.description || '',
     image: category.image_url || '',
     count: category.product_count?.[0]?.count || 0,
-    parent: category.parent_id || null
   })) as Category[];
 };
 
@@ -46,7 +44,6 @@ export const fetchCategoryById = async (categoryId: string) => {
     description: data.description || '',
     image: data.image_url || '',
     count: data.product_count?.[0]?.count || 0,
-    parent: data.parent_id || null
   } as Category;
 };
 
@@ -63,7 +60,7 @@ export const createCategory = async (categoryData: Partial<Category>) => {
       name: categoryData.name,
       description: categoryData.description,
       image_url: categoryData.image,
-      parent_id: categoryData.parent || null
+      parent_id: null // Removed parent property
     })
     .select()
     .single();
@@ -78,7 +75,6 @@ export const createCategory = async (categoryData: Partial<Category>) => {
     description: data.description || '',
     image: data.image_url || '',
     count: 0, // New category has no products yet
-    parent: data.parent_id || null
   } as Category;
 };
 
@@ -95,7 +91,7 @@ export const updateCategory = async (categoryId: string, categoryData: Partial<C
       name: categoryData.name,
       description: categoryData.description,
       image_url: categoryData.image,
-      parent_id: categoryData.parent || null
+      parent_id: null // Removed parent property
     })
     .eq('id', categoryId)
     .select()
@@ -111,7 +107,6 @@ export const updateCategory = async (categoryId: string, categoryData: Partial<C
     description: data.description || '',
     image: data.image_url || '',
     count: 0, // We don't know the count here, would need another query
-    parent: data.parent_id || null
   } as Category;
 };
 

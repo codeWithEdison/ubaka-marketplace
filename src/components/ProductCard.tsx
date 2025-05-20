@@ -48,7 +48,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         )}
         
         {/* New tag */}
-        {product.isNew && (
+        {product.new && (
           <div className="absolute top-4 right-4 z-10 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-md">
             NEW
           </div>
@@ -80,7 +80,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         <div className="p-4 flex-grow flex flex-col justify-between">
           <div>
             <div className="text-sm text-muted-foreground mb-1">
-              {product.category ? product.category.name : 'Uncategorized'}
+              {typeof product.category === 'string' ? product.category : 'Uncategorized'}
             </div>
             
             <h3 className="font-medium text-lg mb-1 line-clamp-2">{product.name}</h3>
