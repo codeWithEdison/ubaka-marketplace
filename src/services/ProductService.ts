@@ -25,6 +25,8 @@ export interface DbProduct {
   }[] | null;
 }
 
+export type ProductCategory = string | { id: string; name: string };
+
 export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
   return {
     id: dbProduct.id,
@@ -140,7 +142,7 @@ export const fetchProductById = async (productId: string): Promise<Product> => {
     throw new Error('Product not found');
   }
   
-  return mapDbProductToProduct(data);
+  return mapDbProductToProduct(data as DbProduct);
 };
 
 export const createProduct = async (productData: Omit<Product, 'id'>) => {

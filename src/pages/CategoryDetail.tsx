@@ -8,6 +8,11 @@ import ProductCard from '@/components/ProductCard';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from 'lucide-react';
 
+interface ProductCategory {
+  id: string;
+  name: string;
+}
+
 const CategoryDetail = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
@@ -19,9 +24,14 @@ const CategoryDetail = () => {
     // Simulate loading data from an API
     setLoading(true);
     const timer = setTimeout(() => {
-      const filteredProducts = products.filter(product => 
-        product.category === category?.name
-      );
+      const filteredProducts = products.filter(product => {
+        if (typeof product.category === 'string') {
+          return product.category === category?.name;
+        } else if (product.category && typeof product.category === 'object') {
+          return product.category.id === categoryId;
+        }
+        return false;
+      });
       setCategoryProducts(filteredProducts);
       setLoading(false);
     }, 500);
@@ -66,8 +76,8 @@ const CategoryDetail = () => {
             
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold">{category.name}</h1>
-                <p className="text-muted-foreground mt-2">{category.description}</p>
+                <h1 className="text-3xl md:text-4xl font-bold">{category?.name}</h1>
+                <p className="text-muted-foreground mt-2">{category?.description}</p>
               </div>
               <div className="flex-shrink-0">
                 <Link to="/products">

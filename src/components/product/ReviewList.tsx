@@ -21,7 +21,7 @@ const ReviewList: React.FC<ReviewListProps> = ({ productId }) => {
     { enabled: !!productId }
   );
   
-  const filteredReviews = filter 
+  const filteredReviews = filter !== null
     ? reviews.filter(review => review.rating === filter)
     : reviews;
   

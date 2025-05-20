@@ -189,7 +189,7 @@ const ProductDetail = () => {
               {/* Product Reviews */}
               <div className="mt-12">
                 <h2 className="text-2xl font-bold mb-6">Customer Reviews</h2>
-                <ReviewList productId={productId as string} />
+                <ReviewList productId={product.id} />
                 <div className="mt-8">
                   <AddReviewForm productId={product.id} onReviewAdded={() => {}} />
                 </div>

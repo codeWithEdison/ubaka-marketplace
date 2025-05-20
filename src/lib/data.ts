@@ -1,9 +1,10 @@
+
 export interface Product {
   id: string;
   name: string;
   description: string;
   price: number;
-  category: string;
+  category: string | { id: string; name: string };
   image: string;
   rating: number;
   inStock: boolean;

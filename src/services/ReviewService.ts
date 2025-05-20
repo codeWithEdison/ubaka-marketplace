@@ -20,7 +20,7 @@ export interface Review {
 }
 
 // Fetch reviews for a specific product
-export const fetchReviewsForProduct = async (productId: string) => {
+export const fetchReviewsForProduct = async (productId: string): Promise<Review[]> => {
   try {
     const { data, error } = await supabase
       .from('reviews')
@@ -46,14 +46,14 @@ export const fetchReviewsForProduct = async (productId: string) => {
       const userData = review.profiles || {};
       const firstName = userData.first_name || '';
       const lastName = userData.last_name || '';
-      const avatarUrl = userData.avatar_url;
+      const avatarUrl = userData.avatar_url || '';
       
       return {
         id: review.id,
         productId: review.product_id,
         userId: review.user_id,
         userName: `${firstName} ${lastName}`.trim() || 'Anonymous',
-        userAvatar: avatarUrl || '',
+        userAvatar: avatarUrl,
         rating: review.rating,
         title: review.title || '',
         content: review.content || '',
@@ -172,7 +172,7 @@ export const voteReview = async (reviewId: string, isHelpful: boolean) => {
 // Update product rating based on reviews
 export const updateProductRating = async (productId: string) => {
   try {
-    // Instead of using RPC, we'll calculate the average rating manually
+    // Calculate the average rating manually
     const { data: reviews, error } = await supabase
       .from('reviews')
       .select('rating')
