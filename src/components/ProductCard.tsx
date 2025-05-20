@@ -80,7 +80,8 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         <div className="p-4 flex-grow flex flex-col justify-between">
           <div>
             <div className="text-sm text-muted-foreground mb-1">
-              {typeof product.category === 'string' ? product.category : 'Uncategorized'}
+              {typeof product.category === 'string' ? product.category : 
+               (typeof product.category === 'object' && product.category ? product.category.name : 'Uncategorized')}
             </div>
             
             <h3 className="font-medium text-lg mb-1 line-clamp-2">{product.name}</h3>

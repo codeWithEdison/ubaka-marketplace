@@ -1,18 +1,30 @@
+
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, Menu, X, User } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Search, ShoppingCart, Menu, X, User, LogIn, LogOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { getTotalItems } = useCart();
+  const { items, getTotalItems } = useCart();
+  const { user, signOut, profile } = useAuth();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -34,11 +46,19 @@ const Navbar = () => {
       title: "Search initiated",
       description: `Searching for: ${searchQuery}`,
     });
-    // In a real app, we would navigate to search results page
+    navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
   };
   
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+  
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed out successfully",
+      description: "You have been logged out of your account.",
+    });
   };
   
   const navLinks = [
@@ -50,8 +70,8 @@ const Navbar = () => {
     { name: "Contact", path: "/contact" },
   ];
 
-  // Use the getTotalItems function from CartContext
-  const cartItemCount = getTotalItems();
+  // Calculate cart item count
+  const cartItemCount = getTotalItems ? getTotalItems() : 0;
 
   return (
     <header 
@@ -101,18 +121,48 @@ const Navbar = () => {
               <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </form>
             
-            <Link to="/account">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <User className="h-5 w-5" />
-              </Button>
-            </Link>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    {profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}` : 'My Account'}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/account" className="w-full cursor-pointer">Account</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account?tab=orders" className="w-full cursor-pointer">Orders</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth/sign-in">
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
             
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="rounded-full relative">
                 <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItemCount}
-                </span>
+                {items && items.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
               </Button>
             </Link>
           </div>
@@ -122,9 +172,11 @@ const Navbar = () => {
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="rounded-full relative">
                 <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItemCount}
-                </span>
+                {items && items.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
               </Button>
             </Link>
             
@@ -174,19 +226,42 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            <Link
-              to="/account"
-              className="px-2 py-1.5 rounded-md transition-colors flex items-center space-x-2"
-            >
-              <User className="h-4 w-4" />
-              <span>My Account</span>
-            </Link>
-            <Link 
-              to="/admin" 
-              className="px-2 py-1.5 rounded-md transition-colors text-ubaka-700 dark:text-white/80 hover:bg-secondary"
-            >
-              Administration
-            </Link>
+            
+            {user ? (
+              <>
+                <Link
+                  to="/account"
+                  className="px-2 py-1.5 rounded-md transition-colors flex items-center space-x-2"
+                >
+                  <User className="h-4 w-4" />
+                  <span>My Account</span>
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="px-2 py-1.5 rounded-md transition-colors flex items-center space-x-2 w-full text-left"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign Out</span>
+                </button>
+                {/* Show Admin link if user has admin role */}
+                {profile?.role === 'admin' && (
+                  <Link 
+                    to="/admin" 
+                    className="px-2 py-1.5 rounded-md transition-colors text-ubaka-700 dark:text-white/80 hover:bg-secondary"
+                  >
+                    Administration
+                  </Link>
+                )}
+              </>
+            ) : (
+              <Link
+                to="/auth/sign-in"
+                className="px-2 py-1.5 rounded-md transition-colors flex items-center space-x-2"
+              >
+                <LogIn className="h-4 w-4" />
+                <span>Sign In</span>
+              </Link>
+            )}
           </nav>
         </div>
       </div>

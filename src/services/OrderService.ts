@@ -1,8 +1,36 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { CartItem, Order, ShippingAddress } from '@/lib/data';
+import { CartItem } from '@/lib/data';
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+// Define ShippingAddress interface if it's not already defined in data.ts
+export interface ShippingAddress {
+  fullName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  items: CartItem[];
+  status: OrderStatus;
+  total: number;
+  shippingAddress: ShippingAddress;
+  createdAt: string;
+  updatedAt: string;
+  paymentIntentId?: string;
+  paymentMethod?: string;
+  trackingNumber?: string;
+  estimatedDelivery?: string;
+  notes?: string;
+}
 
 // Fetch all orders for the current user
 export const fetchOrders = async () => {
@@ -134,7 +162,7 @@ export const createOrder = async (cartItems: CartItem[], shippingAddress: Shippi
     .insert({
       user_id: user.id,
       total: finalTotal,
-      shipping_address: shippingAddress,
+      shipping_address: shippingAddress as any, // Cast as any to bypass TypeScript check
       payment_method: paymentMethod,
       status: 'pending'
     })

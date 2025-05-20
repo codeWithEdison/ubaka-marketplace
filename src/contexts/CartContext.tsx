@@ -50,6 +50,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setItems(localCart);
         }
       } catch (error: any) {
+        console.error('Error loading cart:', error);
         toast({
           title: "Error loading cart",
           description: error.message || "Could not load your cart",
@@ -97,6 +98,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: `${product.name} (x${quantity}) added to your cart`,
       });
     } catch (error: any) {
+      console.error('Error adding item to cart:', error);
       toast({
         title: "Error adding item",
         description: error.message || "Could not add item to cart",
@@ -125,6 +127,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Item removed from your cart",
       });
     } catch (error: any) {
+      console.error('Error removing item from cart:', error);
       toast({
         title: "Error removing item",
         description: error.message || "Could not remove item from cart",
@@ -157,6 +160,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('cart', JSON.stringify(updatedItems));
       }
     } catch (error: any) {
+      console.error('Error updating cart item quantity:', error);
       toast({
         title: "Error updating quantity",
         description: error.message || "Could not update item quantity",
@@ -177,6 +181,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('cart', JSON.stringify([]));
       }
     } catch (error: any) {
+      console.error('Error clearing cart:', error);
       toast({
         title: "Error clearing cart",
         description: error.message || "Could not clear your cart",

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/lib/data';
 
@@ -60,7 +61,7 @@ export const createCategory = async (categoryData: Partial<Category>) => {
       name: categoryData.name,
       description: categoryData.description,
       image_url: categoryData.image,
-      parent_id: null // Removed parent property
+      parent_id: null // Removed parent property reference
     })
     .select()
     .single();
@@ -91,7 +92,7 @@ export const updateCategory = async (categoryId: string, categoryData: Partial<C
       name: categoryData.name,
       description: categoryData.description,
       image_url: categoryData.image,
-      parent_id: null // Removed parent property
+      parent_id: null // Removed parent property reference
     })
     .eq('id', categoryId)
     .select()

@@ -1,5 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
+// Update this to match what's in the database schema
 export type ReturnReason = 'damaged' | 'wrong_item' | 'not_as_described' | 'changed_mind' | 'other';
 
 export interface ReturnRequestInput {
@@ -62,14 +64,14 @@ export const createReturnRequest = async (returnData: ReturnRequestInput) => {
   await supabase
     .from('notifications')
     .insert({
+      user_id: user.id,
       type: 'return_status',
       title: 'Return Request Submitted',
       message: `Your return request for order #${returnData.orderId.substring(0, 8)} has been submitted and is pending review.`,
       data: { 
         return_id: data.id,
         order_id: returnData.orderId
-      },
-      user_id: user.id
+      }
     });
   
   return data;
@@ -162,11 +164,11 @@ export const updateReturnStatus = async (returnId: string, status: string, admin
   await supabase
     .from('notifications')
     .insert({
+      user_id: returnRequest.user_id,
       type: 'return_status',
       title: `Return ${status.charAt(0).toUpperCase() + status.slice(1)}`,
       message: `Your return request #${returnId.substring(0, 8)} has been ${status}.`,
-      data: { return_id: returnId },
-      user_id: returnRequest.user_id
+      data: { return_id: returnId }
     });
   
   return data;
