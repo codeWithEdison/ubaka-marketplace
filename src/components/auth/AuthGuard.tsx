@@ -3,7 +3,6 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -12,38 +11,36 @@ interface AuthGuardProps {
 
 const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
   const location = useLocation();
-  const { user, isLoading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [checkingAdmin, setCheckingAdmin] = useState<boolean>(false);
+  const { user, isLoading, isAdmin, checkIsAdmin } = useAuth();
+  const [adminChecked, setAdminChecked] = useState<boolean>(!requireAdmin);
+  const [hasAdminPermission, setHasAdminPermission] = useState<boolean>(isAdmin);
+  const [loading, setLoading] = useState<boolean>(isLoading || requireAdmin);
 
   // Check if user is an admin when requireAdmin is true
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const verifyAdminStatus = async () => {
       if (requireAdmin && user) {
-        setCheckingAdmin(true);
+        setLoading(true);
         try {
-          const { data } = await supabase
-            .from('user_roles')
-            .select()
-            .eq('user_id', user.id)
-            .eq('role', 'admin')
-            .maybeSingle();
-          
-          setIsAdmin(!!data);
+          const isUserAdmin = await checkIsAdmin();
+          setHasAdminPermission(isUserAdmin);
         } catch (error) {
           console.error('Error checking admin status:', error);
-          setIsAdmin(false);
+          setHasAdminPermission(false);
         } finally {
-          setCheckingAdmin(false);
+          setAdminChecked(true);
+          setLoading(false);
         }
       }
     };
 
-    checkAdminStatus();
-  }, [user, requireAdmin]);
+    if (!adminChecked) {
+      verifyAdminStatus();
+    }
+  }, [user, requireAdmin, adminChecked, checkIsAdmin]);
   
-  // Still checking authentication status
-  if (isLoading || (requireAdmin && user && checkingAdmin)) {
+  // Still checking authentication status or admin status
+  if (isLoading || (requireAdmin && user && !adminChecked)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -62,7 +59,7 @@ const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
   }
 
   // If admin access required but user is not an admin
-  if (requireAdmin && !isAdmin) {
+  if (requireAdmin && !hasAdminPermission) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 

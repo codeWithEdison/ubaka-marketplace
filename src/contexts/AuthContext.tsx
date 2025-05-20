@@ -1,15 +1,17 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { hasRole } from '@/lib/auth';
 
 interface AuthContextProps {
   session: Session | null;
   user: User | null;
   profile: any | null;  // Will be typed properly once we have a profile type
   isLoading: boolean;
+  isAdmin: boolean;
+  checkIsAdmin: () => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<{
     error: Error | null;
     data: Session | null;
@@ -31,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -43,13 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           setTimeout(() => {
             fetchProfile(session.user.id);
+            checkAdminStatus();
           }, 0);
         } else {
           setProfile(null);
+          setIsAdmin(false);
         }
         
         if (event === 'SIGNED_OUT') {
           setProfile(null);
+          setIsAdmin(false);
         }
       }
     );
@@ -61,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (session?.user) {
         fetchProfile(session.user.id);
+        checkAdminStatus();
       }
       
       setIsLoading(false);
@@ -85,6 +92,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
     }
+  };
+
+  const checkAdminStatus = async () => {
+    const adminStatus = await hasRole('admin');
+    setIsAdmin(adminStatus);
+    return adminStatus;
+  };
+
+  const checkIsAdmin = async () => {
+    return await checkAdminStatus();
   };
 
   const signIn = async (email: string, password: string) => {
@@ -178,6 +195,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     profile,
     isLoading,
+    isAdmin,
+    checkIsAdmin,
     signIn,
     signUp,
     signOut,
