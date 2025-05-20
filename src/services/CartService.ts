@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem, Product } from '@/lib/data';
 
@@ -34,15 +33,12 @@ export const fetchCart = async (): Promise<CartItem[]> => {
       price: item.products.price,
       description: item.products.description || '',
       image: item.products.image_url || '',
-      category: { 
-        id: item.products.category_id || '', 
-        name: '' // We'll need to fetch category names separately if needed
-      },
+      category: item.products.category_id || '', // Using string for category
       inStock: item.products.in_stock || true,
       featured: item.products.featured || false,
       discount: item.products.discount || 0,
       rating: 0, // We'll need to calculate this from reviews if needed
-      isNew: item.products.is_new || false,
+      new: item.products.is_new || false, // Changed from isNew to new to match Product interface
       specifications: item.products.specifications || {}
     } as Product;
     

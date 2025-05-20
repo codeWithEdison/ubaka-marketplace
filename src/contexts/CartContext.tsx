@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CartItem, Product } from '@/lib/data';
 import { useAuth } from './AuthContext';
-import { fetchCart, addToCart, updateCartItemQuantity, removeFromCart, syncCartWithServer } from '@/services/CartService';
+import { fetchCart, addToCart as addToCartService, updateCartItemQuantity as updateCartQuantityService, removeFromCart as removeCartItemService, syncCartWithServer } from '@/services/CartService';
 import { toast } from '@/components/ui/use-toast';
 
 interface CartContextType {
@@ -69,7 +69,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (user) {
         // User is authenticated, add item to Supabase
-        await addToCart(product.id, quantity);
+        await addToCartService(product.id, quantity);
         // Refresh cart
         const updatedCart = await fetchCart();
         setItems(updatedCart);
@@ -109,7 +109,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (user) {
         // User is authenticated, remove item from Supabase
-        await removeFromCart(productId);
+        await removeCartItemService(productId);
         // Refresh cart
         const updatedCart = await fetchCart();
         setItems(updatedCart);
@@ -142,7 +142,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (user) {
         // User is authenticated, update item in Supabase
-        await updateCartItemQuantity(productId, quantity);
+        await updateCartQuantityService(productId, quantity);
         // Refresh cart
         const updatedCart = await fetchCart();
         setItems(updatedCart);
@@ -169,7 +169,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (user) {
         // User is authenticated, clear cart in Supabase
-        await removeFromCart('all');
+        await removeCartItemService('all');
         setItems([]);
       } else {
         // User is not authenticated, clear cart in localStorage
@@ -185,12 +185,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Calculate total number of items in cart
   const getTotalItems = () => {
     return items.reduce((total, item) => total + item.quantity, 0);
   };
 
-  // Calculate total price of cart
   const getTotalPrice = () => {
     return items.reduce((total, item) => {
       const price = item.product.price;

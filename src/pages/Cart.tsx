@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, ShoppingCart, Plus, Minus, ArrowRight } from 'lucide-react';
@@ -12,7 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Coupon, calculateDiscountAmount } from '@/lib/couponUtils';
 
 const Cart = () => {
-  const { items, removeFromCart, updateQuantity, getTotalPrice } = useCart();
+  const { items, removeItem, updateQuantity, getTotalPrice } = useCart();
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   
   const subtotal = getTotalPrice();
@@ -132,7 +131,7 @@ const Cart = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => removeFromCart(product.id)}
+                                  onClick={() => removeItem(product.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

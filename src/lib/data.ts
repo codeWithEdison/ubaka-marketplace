@@ -9,7 +9,7 @@ export interface Product {
   rating: number;
   inStock: boolean;
   featured?: boolean;
-  new?: boolean;
+  new?: boolean; // Using 'new' instead of 'isNew'
   discount?: number;
   specifications?: Record<string, string>;
 }
