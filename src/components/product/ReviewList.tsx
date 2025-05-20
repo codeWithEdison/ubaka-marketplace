@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { fetchReviewsForProduct, Review, voteReview } from '@/services/ReviewService';
 import { useApiQuery } from '@/hooks/useApi';
+import { toast } from '@/components/ui/use-toast';
 
 interface ReviewListProps {
   productId: string;
@@ -14,7 +15,7 @@ interface ReviewListProps {
 const ReviewList: React.FC<ReviewListProps> = ({ productId }) => {
   const [filter, setFilter] = useState<number | null>(null);
   
-  const { data: reviews = [] } = useApiQuery<Review[]>(
+  const { data: reviews = [], isLoading } = useApiQuery<Review[]>(
     ['product-reviews', productId],
     () => fetchReviewsForProduct(productId),
     { enabled: !!productId }
@@ -27,14 +28,45 @@ const ReviewList: React.FC<ReviewListProps> = ({ productId }) => {
   const handleHelpful = async (reviewId: string, isHelpful: boolean) => {
     try {
       await voteReview(reviewId, isHelpful);
-      // We could refetch the reviews here to update the UI, but that would require extra API calls
-      // For now, we'll just show the action was taken
+      toast({
+        title: "Thanks for your feedback!",
+        description: "Your vote has been recorded.",
+      });
     } catch (error) {
       console.error('Error voting on review:', error);
+      toast({
+        title: "Error",
+        description: "There was an issue recording your vote. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   
   const ratings = [5, 4, 3, 2, 1];
+  
+  if (isLoading) {
+    return (
+      <div className="py-6">
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="flex space-x-2 items-center mb-4">
+                  <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
+                </div>
+                <div className="h-4 w-48 bg-gray-200 animate-pulse rounded mb-3"></div>
+                <div className="h-16 bg-gray-200 animate-pulse rounded mb-4"></div>
+                <div className="flex space-x-2">
+                  <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
   
   if (reviews.length === 0) {
     return (

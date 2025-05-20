@@ -11,7 +11,6 @@ import ReviewList from '@/components/product/ReviewList';
 import AddReviewForm from '@/components/product/AddReviewForm';
 import { useCart } from '@/contexts/CartContext';
 import { fetchProductById } from '@/services/ProductService';
-import { fetchReviewsForProduct } from '@/services/ReviewService';
 import { useApiQuery } from '@/hooks/useApi';
 import { Product } from '@/lib/data';
 
@@ -23,12 +22,6 @@ const ProductDetail = () => {
   const { data: product, isLoading } = useApiQuery<Product>(
     ['product', productId as string],
     () => fetchProductById(productId as string),
-    { enabled: !!productId }
-  );
-  
-  const { data: reviews = [], refetch: refetchReviews } = useApiQuery(
-    ['product-reviews', productId as string],
-    () => fetchReviewsForProduct(productId as string),
     { enabled: !!productId }
   );
   
@@ -198,7 +191,7 @@ const ProductDetail = () => {
                 <h2 className="text-2xl font-bold mb-6">Customer Reviews</h2>
                 <ReviewList productId={productId as string} />
                 <div className="mt-8">
-                  <AddReviewForm productId={product.id} onReviewAdded={refetchReviews} />
+                  <AddReviewForm productId={product.id} onReviewAdded={() => {}} />
                 </div>
               </div>
             </>

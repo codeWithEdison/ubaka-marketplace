@@ -21,56 +21,55 @@ export interface Review {
 
 // Fetch reviews for a specific product
 export const fetchReviewsForProduct = async (productId: string) => {
-  const { data, error } = await supabase
-    .from('reviews')
-    .select(`
-      *,
-      user_id:profiles(
-        id,
-        first_name,
-        last_name,
-        avatar_url
-      ),
-      helpful_votes:review_votes(id, is_helpful)
-    `)
-    .eq('product_id', productId)
-    .eq('is_approved', true)
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    throw new Error(error.message);
+  try {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select(`
+        *,
+        profiles(id, first_name, last_name, avatar_url),
+        review_votes(id, is_helpful)
+      `)
+      .eq('product_id', productId)
+      .eq('is_approved', true)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    // Format the response to match our Review type
+    const reviews: Review[] = data.map(review => {
+      const helpfulVotes = review.review_votes?.filter((vote: any) => vote.is_helpful) || [];
+      const notHelpfulVotes = review.review_votes?.filter((vote: any) => !vote.is_helpful) || [];
+      
+      // Safely access the nested user data
+      const userData = review.profiles || {};
+      const firstName = userData.first_name || '';
+      const lastName = userData.last_name || '';
+      const avatarUrl = userData.avatar_url;
+      
+      return {
+        id: review.id,
+        productId: review.product_id,
+        userId: review.user_id,
+        userName: `${firstName} ${lastName}`.trim() || 'Anonymous',
+        userAvatar: avatarUrl || '',
+        rating: review.rating,
+        title: review.title || '',
+        content: review.content || '',
+        createdAt: review.created_at,
+        isVerifiedPurchase: review.is_verified_purchase || false,
+        isApproved: review.is_approved,
+        helpfulCount: helpfulVotes.length,
+        notHelpfulCount: notHelpfulVotes.length
+      };
+    });
+    
+    return reviews;
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    throw error;
   }
-  
-  // Format the response to match our Review type
-  const reviews: Review[] = data.map(review => {
-    const helpfulVotes = review.helpful_votes?.filter((vote: any) => vote.is_helpful) || [];
-    const notHelpfulVotes = review.helpful_votes?.filter((vote: any) => !vote.is_helpful) || [];
-    
-    // Safely access the nested user data
-    const userData = review.user_id || {};
-    const userId = typeof userData === 'object' ? (userData as any).id : review.user_id;
-    const firstName = typeof userData === 'object' ? (userData as any).first_name || '' : '';
-    const lastName = typeof userData === 'object' ? (userData as any).last_name || '' : '';
-    const avatarUrl = typeof userData === 'object' ? (userData as any).avatar_url : null;
-    
-    return {
-      id: review.id,
-      productId: review.product_id,
-      userId: userId,
-      userName: `${firstName} ${lastName}`.trim() || 'Anonymous',
-      userAvatar: avatarUrl || '',
-      rating: review.rating,
-      title: review.title || '',
-      content: review.content || '',
-      createdAt: review.created_at,
-      isVerifiedPurchase: review.is_verified_purchase || false,
-      isApproved: review.is_approved,
-      helpfulCount: helpfulVotes.length,
-      notHelpfulCount: notHelpfulVotes.length
-    };
-  });
-  
-  return reviews;
 };
 
 // Add a new review
@@ -108,6 +107,7 @@ export const addReview = async (productId: string, rating: number, title: string
   const { data, error } = await supabase
     .from('reviews')
     .insert({
+      id: uuidv4(),
       product_id: productId,
       user_id: user.id,
       rating,
@@ -157,6 +157,7 @@ export const voteReview = async (reviewId: string, isHelpful: boolean) => {
     const { error } = await supabase
       .from('review_votes')
       .insert({ 
+        id: uuidv4(),
         review_id: reviewId,
         user_id: user.id,
         is_helpful: isHelpful 
@@ -171,14 +172,30 @@ export const voteReview = async (reviewId: string, isHelpful: boolean) => {
 // Update product rating based on reviews
 export const updateProductRating = async (productId: string) => {
   try {
-    const { data, error } = await supabase
-      .rpc('calculate_product_rating', { product_id: productId });
+    // Instead of using RPC, we'll calculate the average rating manually
+    const { data: reviews, error } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('product_id', productId)
+      .eq('is_approved', true);
       
     if (error) {
       console.error('Error calculating product rating:', error);
+      return null;
     }
     
-    return data;
+    if (!reviews || reviews.length === 0) {
+      return null;
+    }
+    
+    // Calculate average rating
+    const sum = reviews.reduce((total, review) => total + review.rating, 0);
+    const average = sum / reviews.length;
+    
+    return {
+      average_rating: average,
+      review_count: reviews.length
+    };
   } catch (error) {
     console.error('Failed to calculate product rating:', error);
     return null;

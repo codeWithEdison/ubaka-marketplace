@@ -1,6 +1,50 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/lib/data';
+
+export interface DbProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  category_id: string | null;
+  image_url: string | null;
+  discount: number | null;
+  featured: boolean | null;
+  in_stock: boolean | null;
+  is_new: boolean | null;
+  specifications: any | null;
+  created_at: string;
+  updated_at: string;
+  categories?: {
+    id: string;
+    name: string;
+  } | null;
+  ratings?: {
+    average_rating: number | null;
+    review_count: number | null;
+  }[] | null;
+}
+
+export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
+  return {
+    id: dbProduct.id,
+    name: dbProduct.name,
+    description: dbProduct.description || '',
+    price: dbProduct.price,
+    image: dbProduct.image_url || '',
+    category: dbProduct.categories ? {
+      id: dbProduct.categories.id,
+      name: dbProduct.categories.name
+    } : 'Uncategorized',
+    rating: dbProduct.ratings && dbProduct.ratings[0] ? 
+      dbProduct.ratings[0].average_rating || 0 : 0,
+    discount: dbProduct.discount || 0,
+    new: dbProduct.is_new || false,
+    featured: dbProduct.featured || false,
+    inStock: dbProduct.in_stock !== null ? dbProduct.in_stock : true,
+    specifications: dbProduct.specifications || {}
+  };
+}
 
 export const fetchProducts = async (
   { 
@@ -66,8 +110,10 @@ export const fetchProducts = async (
     throw new Error(error.message);
   }
   
+  const products = data?.map(mapDbProductToProduct) || [];
+  
   return { 
-    products: data || [], 
+    products,
     count: count || 0,
     page,
     limit,
@@ -75,7 +121,7 @@ export const fetchProducts = async (
   };
 };
 
-export const fetchProductById = async (productId: string) => {
+export const fetchProductById = async (productId: string): Promise<Product> => {
   const { data, error } = await supabase
     .from('products')
     .select(`
@@ -90,7 +136,11 @@ export const fetchProductById = async (productId: string) => {
     throw new Error(error.message);
   }
   
-  return data;
+  if (!data) {
+    throw new Error('Product not found');
+  }
+  
+  return mapDbProductToProduct(data);
 };
 
 export const createProduct = async (productData: Omit<Product, 'id'>) => {
