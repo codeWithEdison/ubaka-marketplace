@@ -1,142 +1,133 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ShoppingCart, Star } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useCart } from '@/contexts/CartContext';
 import { Product } from '@/lib/data';
-import { formatCurrency } from '@/lib/utils';
+import { useCart } from '@/contexts/CartContext';
 
 interface ProductCardProps {
   product: Product;
-  index: number;
+  index?: number;
 }
 
-const ProductCard = ({ product, index }: ProductCardProps) => {
-  const { addToCart } = useCart();
-  const [isImageError, setIsImageError] = useState(false);
+const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const { addItem } = useCart();
   
+  // Calculate the animation delay based on index
+  const animDelay = `${index * 0.1}s`;
+
+  // Format price with discount
+  const formatPrice = (price: number, discount?: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(price - (price * ((discount || 0) / 100)));
+  };
+
   const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    addToCart(product);
-  };
-  
-  const handleImageError = () => {
-    setIsImageError(true);
-  };
-  
-  const imageUrl = isImageError 
-    ? "https://placehold.co/600x600/EEE/31343C?text=Image+Not+Available" 
-    : product.image;
-  
-  const discountedPrice = product.discount
-    ? product.price * (1 - product.discount / 100)
-    : product.price;
-  
-  // Animation variants
-  const variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: i * 0.1,
-        duration: 0.5,
-      }
-    })
+    e.preventDefault();  // Prevent navigation to product detail
+    addItem(product, 1);
   };
 
   return (
-    <motion.div
-      custom={index}
-      initial="hidden"
-      animate="visible"
-      variants={variants}
-      whileHover={{ y: -5 }}
+    <Link 
+      to={`/products/${product.id}`}
+      className="group block"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ animationDelay: animDelay }}
     >
-      <Link to={`/products/${product.id}`} className="block h-full">
-        <div className="group bg-card rounded-xl overflow-hidden border border-border h-full flex flex-col">
-          {/* Product Image */}
-          <div className="relative aspect-square overflow-hidden bg-muted">
-            <img
-              src={imageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover transition-transform group-hover:scale-105"
-              onError={handleImageError}
-            />
+      <div className="bg-white dark:bg-ubaka-900/20 rounded-xl overflow-hidden shadow-subtle transition-all duration-300 hover:shadow-md relative h-full flex flex-col">
+        {/* Discount tag */}
+        {product.discount && product.discount > 0 && (
+          <div className="absolute top-4 left-4 z-10 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
+            {product.discount}% OFF
+          </div>
+        )}
+        
+        {/* New tag */}
+        {product.isNew && (
+          <div className="absolute top-4 right-4 z-10 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-md">
+            NEW
+          </div>
+        )}
+
+        {/* Product Image */}
+        <div className={`relative pt-[75%] overflow-hidden bg-gray-100 dark:bg-ubaka-950/20`}>
+          <img 
+            src={product.image || 'https://via.placeholder.com/400x300?text=Product+Image'} 
+            alt={product.name} 
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${isHovered ? 'scale-110' : 'scale-100'}`}
+          />
+          
+          {/* Quick add button */}
+          <div className={`absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 to-transparent transition-all duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'} flex justify-center`}>
+            <Button 
+              size="sm"
+              variant="secondary" 
+              onClick={handleAddToCart}
+              className="w-full flex items-center justify-center"
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Add to Cart
+            </Button>
+          </div>
+        </div>
+        
+        {/* Product Info */}
+        <div className="p-4 flex-grow flex flex-col justify-between">
+          <div>
+            <div className="text-sm text-muted-foreground mb-1">
+              {product.category ? product.category.name : 'Uncategorized'}
+            </div>
             
-            {/* Badges */}
-            <div className="absolute top-2 left-2 flex flex-col gap-1">
-              {!product.inStock && (
-                <Badge variant="outline" className="bg-background/80">Out of Stock</Badge>
-              )}
-              {product.new && (
-                <Badge variant="secondary">New</Badge>
-              )}
-              {product.discount && (
-                <Badge variant="destructive">{product.discount}% OFF</Badge>
-              )}
+            <h3 className="font-medium text-lg mb-1 line-clamp-2">{product.name}</h3>
+            
+            <div className="flex items-center mb-2">
+              <div className="flex items-center mr-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star 
+                    key={i} 
+                    className={`h-3.5 w-3.5 ${
+                      i < Math.floor(product.rating || 0) 
+                        ? 'text-yellow-500 fill-yellow-500' 
+                        : 'text-gray-300'
+                    }`} 
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">
+                ({product.rating || 0})
+              </span>
             </div>
           </div>
           
-          {/* Product Info */}
-          <div className="p-4 flex-1 flex flex-col">
-            <div className="flex-1">
-              <h3 className="font-medium text-lg line-clamp-1">{product.name}</h3>
-              
-              <div className="flex items-center mt-1">
-                <div className="flex">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-3.5 w-3.5 ${
-                        i < Math.floor(product.rating)
-                          ? "text-yellow-400 fill-yellow-400"
-                          : "text-gray-300"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs text-muted-foreground ml-1">
-                  ({Math.floor(product.rating * 10)})
-                </span>
+          <div className="mt-2">
+            <div className="flex items-center">
+              <div className="text-lg font-semibold">
+                {formatPrice(product.price, product.discount)}
               </div>
               
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                {product.description}
-              </p>
+              {product.discount && product.discount > 0 && (
+                <div className="text-sm text-muted-foreground line-through ml-2">
+                  {formatPrice(product.price)}
+                </div>
+              )}
             </div>
             
-            <div className="mt-3 pt-3 border-t">
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-semibold">{formatCurrency(discountedPrice)}</div>
-                  {product.discount && (
-                    <div className="text-xs text-muted-foreground line-through">
-                      {formatCurrency(product.price)}
-                    </div>
-                  )}
-                </div>
-                
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="rounded-full h-8 w-8 p-0"
-                  disabled={!product.inStock}
-                  onClick={handleAddToCart}
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  <span className="sr-only">Add to cart</span>
-                </Button>
-              </div>
+            <div className="text-sm mt-2 text-muted-foreground">
+              {!product.inStock ? (
+                <span className="text-red-500">Out of Stock</span>
+              ) : (
+                <span className="text-green-500">In Stock</span>
+              )}
             </div>
           </div>
         </div>
-      </Link>
-    </motion.div>
+      </div>
+    </Link>
   );
 };
 

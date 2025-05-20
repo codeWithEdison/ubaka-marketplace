@@ -50,6 +50,7 @@ const Navbar = () => {
     { name: "Contact", path: "/contact" },
   ];
 
+  // Use the getTotalItems function from CartContext
   const cartItemCount = getTotalItems();
 
   return (
