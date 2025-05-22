@@ -1,6 +1,5 @@
-
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Minus, Plus, ShoppingCart } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -10,9 +9,9 @@ import Footer from '@/components/Footer';
 import ReviewList from '@/components/product/ReviewList';
 import AddReviewForm from '@/components/product/AddReviewForm';
 import { useCart } from '@/contexts/CartContext';
+import { Product } from '@/lib/utils';
 import { fetchProductById } from '@/services/ProductService';
 import { useApiQuery } from '@/hooks/useApi';
-import { Product } from '@/lib/data';
 
 const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();

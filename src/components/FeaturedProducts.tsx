@@ -1,19 +1,24 @@
-
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Filter, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import ProductCard from './ProductCard';
-import { Product } from '@/lib/data';
+import ProductCard from '@/components/ProductCard';
+import { Product } from '@/lib/utils';
 import { useApiQuery } from '@/hooks/useApi';
 import { fetchProducts } from '@/services/ProductService';
+import { useQuery } from '@tanstack/react-query';
+
+interface ProductsResponse {
+  products: Product[];
+}
 
 const FeaturedProducts = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [filterType, setFilterType] = useState<'featured' | 'new' | 'discounted'>('featured');
   
-  const { data: featuredData, isLoading: isFeaturedLoading } = useApiQuery(
+  const { data: featuredData, isLoading: isFeaturedLoading } = useApiQuery<ProductsResponse>(
     ['products', 'featured', filterType],
     async () => {
       switch (filterType) {

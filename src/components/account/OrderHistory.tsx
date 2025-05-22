@@ -1,14 +1,46 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Eye } from 'lucide-react';
+import { Package, Eye, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { mockOrders, OrderStatus } from '@/lib/utils';
-import { getStatusClass, getStatusText } from './statusUtils';
+import { getStatusClass, getStatusText, OrderStatus } from './statusUtils';
+import { useApiQuery } from '@/hooks/useApi';
+import { fetchOrders } from '@/services/OrderService';
+
+interface Order {
+  id: string;
+  created_at: string;
+  status: OrderStatus;
+  total: number;
+  shipping_address: any;
+  tracking_number: string | null;
+  estimated_delivery: string | null;
+}
 
 const OrderHistory = () => {
+  const { data: orders, isLoading } = useApiQuery<Order[]>(
+    ['orders'],
+    () => fetchOrders()
+  );
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Order History</CardTitle>
+          <CardDescription>Loading your orders...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            <span>Loading orders...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -16,7 +48,7 @@ const OrderHistory = () => {
         <CardDescription>View all your past orders and their status.</CardDescription>
       </CardHeader>
       <CardContent>
-        {mockOrders.length === 0 ? (
+        {!orders || orders.length === 0 ? (
           <div className="text-center py-6">
             <Package className="h-12 w-12 mx-auto text-muted-foreground" />
             <p className="mt-2 text-muted-foreground">You haven't placed any orders yet.</p>
@@ -36,10 +68,10 @@ const OrderHistory = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockOrders.map((order) => (
+                {orders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.date}</TableCell>
+                    <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status)}`}>
                         {getStatusText(order.status)}

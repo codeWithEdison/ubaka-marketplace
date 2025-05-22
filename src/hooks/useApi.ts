@@ -1,13 +1,12 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
 
-export function useApiQuery<T>(
-  queryKey: string[], 
-  queryFn: () => Promise<T>, 
+export function useApiQuery<T = unknown>(
+  queryKey: string[],
+  queryFn: () => Promise<T>,
   options: any = {}
 ) {
-  return useQuery({
+  return useQuery<T>({
     queryKey,
     queryFn,
     ...options,
@@ -17,7 +16,7 @@ export function useApiQuery<T>(
         description: error.message || 'An error occurred while fetching data',
         variant: 'destructive',
       });
-      
+
       if (options.onError) {
         options.onError(error);
       }
@@ -30,7 +29,7 @@ export function useApiMutation<T, V>(
   options: any = {}
 ) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn,
     ...options,
@@ -40,7 +39,7 @@ export function useApiMutation<T, V>(
         description: error.message || 'An error occurred while saving data',
         variant: 'destructive',
       });
-      
+
       if (options.onError) {
         options.onError(error, variables, context);
       }
@@ -52,18 +51,18 @@ export function useApiMutation<T, V>(
           description: options.successMessage,
         });
       }
-      
+
       // Invalidate queries if specified
       if (options.invalidateQueries) {
-        const queries = Array.isArray(options.invalidateQueries) 
-          ? options.invalidateQueries 
+        const queries = Array.isArray(options.invalidateQueries)
+          ? options.invalidateQueries
           : [options.invalidateQueries];
-          
+
         queries.forEach((query: string | string[]) => {
           queryClient.invalidateQueries({ queryKey: Array.isArray(query) ? query : [query] });
         });
       }
-      
+
       if (options.onSuccess) {
         options.onSuccess(data, variables, context);
       }

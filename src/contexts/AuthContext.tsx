@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { hasRole } from '@/lib/auth';
+import { hasRole, createProfileIfNotExists } from '@/lib/auth';
 
 interface AuthContextProps {
   session: Session | null;
@@ -117,6 +117,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return { error: response.error, data: null };
     }
+    
+    // Create profile if it doesn't exist
+    await createProfileIfNotExists();
     
     toast({
       title: "Sign in successful",

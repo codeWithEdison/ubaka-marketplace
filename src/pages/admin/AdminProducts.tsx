@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Package, Edit, Trash2, Check, X, Star } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,54 +10,104 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AdminSidebar from '@/components/AdminSidebar';
-import { products, categories, Product } from '@/lib/data';
+import { Product, Category } from '@/lib/utils';
+import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/services/ProductService';
+import { fetchCategories } from '@/services/CategoryService';
 
 const AdminProducts = () => {
-  const [productList, setProductList] = useState<Product[]>(products);
+  const [productList, setProductList] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [productsData, categoriesData] = await Promise.all([
+        fetchProducts(),
+        fetchCategories()
+      ]);
+      setProductList(productsData.products);
+      setCategories(categoriesData);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to load data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const filteredProducts = productList.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchQuery.toLowerCase())
+    product.category.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const handleAddProduct = (newProduct: Product) => {
-    setProductList(prev => [...prev, newProduct]);
-    setIsAddDialogOpen(false);
-    toast({
-      title: "Product added",
-      description: `${newProduct.name} has been added successfully.`,
-    });
-  };
-  
-  const handleEditProduct = (updatedProduct: Product) => {
-    setProductList(prev => 
-      prev.map(product => 
-        product.id === updatedProduct.id ? updatedProduct : product
-      )
-    );
-    setIsEditDialogOpen(false);
-    toast({
-      title: "Product updated",
-      description: `${updatedProduct.name} has been updated successfully.`,
-    });
-  };
-  
-  const handleDeleteProduct = () => {
-    if (selectedProduct) {
-      setProductList(prev => prev.filter(product => product.id !== selectedProduct.id));
-      setIsDeleteDialogOpen(false);
+  const handleAddProduct = async (newProduct: Product) => {
+    try {
+      await createProduct(newProduct);
+      await loadData();
+      setIsAddDialogOpen(false);
       toast({
-        title: "Product deleted",
-        description: `${selectedProduct.name} has been deleted successfully.`,
+        title: "Product added",
+        description: `${newProduct.name} has been added successfully.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to add product",
         variant: "destructive",
       });
+    }
+  };
+  
+  const handleEditProduct = async (updatedProduct: Product) => {
+    try {
+      await updateProduct(updatedProduct.id, updatedProduct);
+      await loadData();
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Product updated",
+        description: `${updatedProduct.name} has been updated successfully.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to update product",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleDeleteProduct = async () => {
+    if (selectedProduct) {
+      try {
+        await deleteProduct(selectedProduct.id);
+        await loadData();
+        setIsDeleteDialogOpen(false);
+        toast({
+          title: "Product deleted",
+          description: `${selectedProduct.name} has been deleted successfully.`,
+          variant: "destructive",
+        });
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to delete product",
+          variant: "destructive",
+        });
+      }
     }
   };
   
@@ -99,7 +148,7 @@ const AdminProducts = () => {
                       <DialogTitle>Add New Product</DialogTitle>
                     </DialogHeader>
                     <ProductForm 
-                      categories={categories.map(c => c.name)} 
+                      categories={categories} 
                       onSubmit={handleAddProduct} 
                     />
                   </DialogContent>
@@ -137,7 +186,7 @@ const AdminProducts = () => {
                             />
                           </TableCell>
                           <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.category}</TableCell>
+                          <TableCell>{product.category.name}</TableCell>
                           <TableCell>${product.price.toFixed(2)}</TableCell>
                           <TableCell>
                             {product.inStock ? (
@@ -176,7 +225,7 @@ const AdminProducts = () => {
                                   {selectedProduct && (
                                     <ProductForm 
                                       product={selectedProduct} 
-                                      categories={categories.map(c => c.name)} 
+                                      categories={categories} 
                                       onSubmit={handleEditProduct} 
                                     />
                                   )}
@@ -227,7 +276,7 @@ const AdminProducts = () => {
 
 interface ProductFormProps {
   product?: Product;
-  categories: string[];
+  categories: Category[];
   onSubmit: (product: Product) => void;
 }
 
@@ -287,14 +336,22 @@ const ProductForm = ({ product, categories, onSubmit }: ProductFormProps) => {
           <select 
             id="category" 
             name="category" 
-            value={formData.category} 
-            onChange={handleInputChange}
+            value={formData.category.id} 
+            onChange={(e) => {
+              const selectedCategory = categories.find(c => c.id === e.target.value);
+              if (selectedCategory) {
+                setFormData(prev => ({
+                  ...prev,
+                  category: selectedCategory
+                }));
+              }
+            }}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             required
           >
             {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
+              <option key={category.id} value={category.id}>
+                {category.name}
               </option>
             ))}
           </select>

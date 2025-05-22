@@ -1,6 +1,5 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { CartItem, Product } from '@/lib/data';
+import { CartItem, Product } from '@/lib/utils';
 import { useAuth } from './AuthContext';
 import { fetchCart, addToCart as addToCartService, updateCartItemQuantity as updateCartQuantityService, removeFromCart as removeCartItemService, syncCartWithServer } from '@/services/CartService';
 import { toast } from '@/components/ui/use-toast';

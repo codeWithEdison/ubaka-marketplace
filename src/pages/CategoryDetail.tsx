@@ -1,45 +1,68 @@
-
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { categories, products, Product } from '@/lib/data';
+import { fetchCategoryById } from '@/services/CategoryService';
+import { fetchProductsByCategory } from '@/services/ProductService';
+import { Category, Product } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from 'lucide-react';
 
-interface ProductCategory {
-  id: string;
-  name: string;
-}
-
 const CategoryDetail = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
+  const [category, setCategory] = useState<Category | null>(null);
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  const category = categories.find(cat => cat.id === categoryId);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    // Simulate loading data from an API
-    setLoading(true);
-    const timer = setTimeout(() => {
-      const filteredProducts = products.filter(product => {
-        if (typeof product.category === 'string') {
-          return product.category === category?.name;
-        } else if (product.category && typeof product.category === 'object') {
-          return product.category.id === categoryId;
-        }
-        return false;
-      });
-      setCategoryProducts(filteredProducts);
-      setLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [categoryId, category?.name]);
+    const loadData = async () => {
+      if (!categoryId) return;
+      
+      try {
+        setLoading(true);
+        const [categoryData, productsData] = await Promise.all([
+          fetchCategoryById(categoryId),
+          fetchProductsByCategory(categoryId)
+        ]);
+        
+        setCategory(categoryData);
+        setCategoryProducts(productsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load category data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (!category) {
+    loadData();
+  }, [categoryId]);
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen pt-24 pb-16">
+          <div className="container mx-auto px-4">
+            <div className="text-center py-12">
+              <h1 className="text-3xl font-bold mb-4">Error</h1>
+              <p className="mb-6 text-muted-foreground">{error}</p>
+              <Link to="/categories">
+                <Button>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Categories
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!category && !loading) {
     return (
       <>
         <Navbar />

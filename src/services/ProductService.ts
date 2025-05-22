@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/lib/data';
+import { Product } from '@/lib/utils';
 
 export interface DbProduct {
   id: string;
@@ -45,7 +44,7 @@ export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
       id: 'uncategorized',
       name: 'Uncategorized'
     },
-    rating: dbProduct.ratings && dbProduct.ratings[0] ? 
+    rating: dbProduct.ratings && dbProduct.ratings[0] ?
       dbProduct.ratings[0].average_rating || 0 : 0,
     discount: dbProduct.discount || 0,
     new: dbProduct.is_new || false,
@@ -56,14 +55,14 @@ export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
 };
 
 export const fetchProducts = async (
-  { 
-    category = '', 
-    search = '', 
-    minPrice = 0, 
-    maxPrice = 0, 
+  {
+    category = '',
+    search = '',
+    minPrice = 0,
+    maxPrice = 0,
     inStock = true,
-    featured = false, 
-    isNew = false, 
+    featured = false,
+    isNew = false,
     page = 1,
     limit = 12,
     sortBy = 'name',
@@ -80,48 +79,48 @@ export const fetchProducts = async (
   if (category) {
     query = query.eq('category_id', category);
   }
-  
+
   if (search) {
     query = query.ilike('name', `%${search}%`);
   }
-  
+
   if (minPrice > 0) {
     query = query.gte('price', minPrice);
   }
-  
+
   if (maxPrice > 0) {
     query = query.lte('price', maxPrice);
   }
-  
+
   if (inStock !== null) {
     query = query.eq('in_stock', inStock);
   }
-  
+
   if (featured) {
     query = query.eq('featured', true);
   }
-  
+
   if (isNew) {
     query = query.eq('is_new', true);
   }
 
   // Apply sorting
   query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-  
+
   // Apply pagination
   const from = (page - 1) * limit;
   const to = from + limit - 1;
   query = query.range(from, to);
-  
+
   const { data, error, count } = await query;
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   const products = data?.map(mapDbProductToProduct) || [];
-  
-  return { 
+
+  return {
     products,
     count: count || 0,
     page,
@@ -140,15 +139,15 @@ export const fetchProductById = async (productId: string): Promise<Product> => {
     `)
     .eq('id', productId)
     .single();
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   if (!data) {
     throw new Error('Product not found');
   }
-  
+
   return mapDbProductToProduct(data as DbProduct);
 };
 
@@ -158,11 +157,11 @@ export const createProduct = async (productData: Omit<Product, 'id'>) => {
     .insert(productData)
     .select()
     .single();
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   return data;
 };
 
@@ -173,11 +172,11 @@ export const updateProduct = async (productId: string, productData: Partial<Prod
     .eq('id', productId)
     .select()
     .single();
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   return data;
 };
 
@@ -186,11 +185,11 @@ export const deleteProduct = async (productId: string) => {
     .from('products')
     .delete()
     .eq('id', productId);
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   return true;
 };
 
@@ -201,10 +200,28 @@ export const updateProductInventory = async (productId: string, inStock: boolean
     .eq('id', productId)
     .select()
     .single();
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   return data;
+};
+
+export const fetchProductsByCategory = async (categoryId: string) => {
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      *,
+      categories:category_id (id, name),
+      ratings:product_ratings (average_rating, review_count)
+    `)
+    .eq('category_id', categoryId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data || []).map(mapDbProductToProduct);
 };

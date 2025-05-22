@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Product } from '@/lib/data';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Product } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';

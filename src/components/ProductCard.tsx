@@ -1,9 +1,8 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Star } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Product } from '@/lib/data';
+import { Product } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
 
 interface ProductCardProps {

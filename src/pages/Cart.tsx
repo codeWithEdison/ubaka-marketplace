@@ -90,7 +90,7 @@ const Cart = () => {
                                       {product.name}
                                     </Link>
                                   </h3>
-                                  <p className="text-sm text-muted-foreground">{product.category}</p>
+                                  <p className="text-sm text-muted-foreground">{product.category.name}</p>
                                 </div>
                                 
                                 <div className="mt-2 sm:mt-0 text-right">

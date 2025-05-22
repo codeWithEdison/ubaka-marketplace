@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Category } from '@/lib/data';
+import { Category } from '@/lib/utils';
 
 export const fetchCategories = async () => {
   // Fetch all categories ordered by name

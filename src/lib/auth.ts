@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -8,13 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const hasRole = async (role: 'admin' | 'moderator' | 'user'): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.rpc('has_role', { role });
-    
+    const { data, error } = await supabase.rpc('check_user_role', { input_role: role });
+
     if (error) {
       console.error('Error checking role:', error);
       return false;
     }
-    
+
     return data === true;
   } catch (error) {
     console.error('Error checking role:', error);
@@ -49,4 +48,45 @@ export const getCurrentUserId = async (): Promise<string | null> => {
     return null;
   }
   return data.user.id;
+};
+
+/**
+ * Create a profile for the current user if it doesn't exist
+ * @returns Promise that resolves to the profile data
+ */
+export const createProfileIfNotExists = async () => {
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  // Check if profile exists
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (existingProfile) {
+    return existingProfile;
+  }
+
+  // Create new profile
+  const { data: newProfile, error } = await supabase
+    .from('profiles')
+    .insert([
+      {
+        id: userId,
+        email: (await supabase.auth.getUser()).data.user?.email || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating profile:', error);
+    return null;
+  }
+
+  return newProfile;
 };

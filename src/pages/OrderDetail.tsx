@@ -2,57 +2,87 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Package, ArrowLeft, ArrowLeftRight } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import OrderTracker, { Order } from '@/components/OrderTracker';
+import OrderTracker, { Order as OrderTrackerOrder } from '@/components/OrderTracker';
 import ReturnItemForm from '@/components/order/ReturnItemForm';
-import { mockOrders, formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { canReturnOrder, getReturnRequestsForOrder, ReturnRequest } from '@/lib/returnUtils';
+import { useApiQuery } from '@/hooks/useApiQuery';
+import { fetchOrderById } from '@/services/OrderService';
+import { OrderStatus } from '@/components/account/statusUtils';
+import { Json } from '@/integrations/supabase/types';
+
+interface OrderItem {
+  id: string;
+  quantity: number;
+  price: number;
+  products: {
+    id: string;
+    name: string;
+  };
+}
+
+interface Order {
+  id: string;
+  user_id: string;
+  status: OrderStatus;
+  total: number;
+  shipping_address: Json;
+  tracking_number?: string;
+  estimated_delivery?: string;
+  created_at: string;
+  notes: string;
+  payment_intent_id: string;
+  payment_method: string;
+  order_items: OrderItem[];
+}
+
+const mapOrderToTrackerOrder = (order: Order): OrderTrackerOrder => {
+  return {
+    id: order.id,
+    date: new Date(order.created_at).toLocaleDateString(),
+    status: order.status,
+    items: order.order_items.map(item => ({
+      id: item.id,
+      name: item.products.name,
+      price: item.price,
+      quantity: item.quantity
+    })),
+    total: order.total,
+    trackingNumber: order.tracking_number,
+    estimatedDelivery: order.estimated_delivery
+  };
+};
 
 const OrderDetail = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
   const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([]);
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [canReturn, setCanReturn] = useState(false);
 
-  useEffect(() => {
-    const fetchOrder = async () => {
-      setLoading(true);
-      try {
-        const foundOrder = mockOrders.find(order => order.id === orderId);
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        if (foundOrder) {
-          setOrder(foundOrder);
-          
-          setCanReturn(canReturnOrder(foundOrder.status, foundOrder.date));
-          
-          setReturnRequests(getReturnRequestsForOrder(foundOrder.id));
-        }
-      } catch (error) {
-        console.error('Error fetching order:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { data: order, isLoading, error } = useApiQuery<Order>(
+    ["order", orderId],
+    () => fetchOrderById(orderId!)
+  );
 
-    fetchOrder();
-  }, [orderId]);
+  useEffect(() => {
+    if (order) {
+      setCanReturn(canReturnOrder(order.status, order.created_at));
+      setReturnRequests(getReturnRequestsForOrder(order.id));
+    }
+  }, [order]);
 
   const handleReturnSuccess = () => {
     setShowReturnForm(false);
-    
     if (order) {
       setReturnRequests(getReturnRequestsForOrder(order.id));
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <>
         <Navbar />
@@ -70,7 +100,7 @@ const OrderDetail = () => {
     );
   }
 
-  if (!order) {
+  if (error || !order) {
     return (
       <>
         <Navbar />
@@ -98,6 +128,8 @@ const OrderDetail = () => {
     );
   }
 
+  const trackerOrder = mapOrderToTrackerOrder(order);
+
   return (
     <>
       <Navbar />
@@ -110,7 +142,7 @@ const OrderDetail = () => {
                 Back to Account
               </Link>
               <h1 className="text-3xl font-bold">Order #{order.id}</h1>
-              <p className="text-muted-foreground">Placed on {order.date}</p>
+              <p className="text-muted-foreground">Placed on {new Date(order.created_at).toLocaleDateString()}</p>
             </div>
             <div className="mt-4 md:mt-0">
               <span className="text-xl font-medium">
@@ -119,12 +151,12 @@ const OrderDetail = () => {
             </div>
           </div>
 
-          <OrderTracker order={order} />
+          <OrderTracker order={trackerOrder} />
           
           {showReturnForm ? (
             <div className="mb-6">
               <ReturnItemForm 
-                order={order} 
+                order={trackerOrder} 
                 onSuccess={handleReturnSuccess}
                 onCancel={() => setShowReturnForm(false)}
               />
@@ -146,13 +178,13 @@ const OrderDetail = () => {
               <h2 className="text-xl font-semibold mb-4">Return Requests</h2>
               <div className="space-y-4">
                 {returnRequests.map(request => {
-                  const item = order.items.find(item => item.id === request.productId);
+                  const item = order.order_items.find(item => item.products.id === request.productId);
                   
                   return (
                     <div key={request.id} className="p-4 border rounded-md">
                       <div className="flex justify-between">
                         <div>
-                          <p className="font-medium">{item?.name || 'Product'}</p>
+                          <p className="font-medium">{item?.products.name || 'Product'}</p>
                           <p className="text-sm text-muted-foreground">
                             Quantity: {request.quantity} • 
                             Reason: {request.reason.replace('_', ' ')}
@@ -186,49 +218,25 @@ const OrderDetail = () => {
             <h2 className="text-xl font-semibold mb-4">Order Details</h2>
             
             <div className="space-y-4">
-              {order.trackingNumber && (
-                <div>
-                  <h3 className="font-medium text-sm mb-2">Tracking Information</h3>
-                  <div className="bg-muted p-4 rounded-md">
-                    <p className="font-medium">Tracking Number: <span className="font-normal">{order.trackingNumber}</span></p>
-                    {order.estimatedDelivery && (
-                      <p className="font-medium mt-1">Estimated Delivery: <span className="font-normal">{order.estimatedDelivery}</span></p>
-                    )}
-                  </div>
-                </div>
-              )}
-              
               <div>
-                <h3 className="font-medium text-sm mb-2">Items</h3>
-                <div className="bg-muted p-4 rounded-md">
-                  <div className="space-y-3">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="flex justify-between">
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
-                        </div>
-                        <p>{formatCurrency(item.price * item.quantity)}</p>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <Separator className="my-4" />
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>{formatCurrency(order.total)}</span>
+                <h3 className="font-medium text-sm mb-2">Shipping Address</h3>
+                <p className="text-sm text-muted-foreground">
+                  {typeof order.shipping_address === 'string' 
+                    ? order.shipping_address 
+                    : JSON.stringify(order.shipping_address)}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-medium text-sm mb-2">Order Items</h3>
+                <div className="space-y-2">
+                  {order.order_items.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span>
+                        {item.products.name} <span className="text-muted-foreground">x{item.quantity}</span>
+                      </span>
+                      <span>{formatCurrency(item.price * item.quantity)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span>{formatCurrency(0)}</span>
-                    </div>
-                    <div className="flex justify-between font-medium pt-1">
-                      <span>Total</span>
-                      <span>{formatCurrency(order.total)}</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>

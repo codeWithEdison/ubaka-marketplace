@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, List, ShoppingBag, Truck, ArrowUpRight, DollarSign, Users } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,8 @@ import {
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AdminSidebar from '@/components/AdminSidebar';
-import { products, categories } from '@/lib/data';
+import { fetchCategories } from '@/services/CategoryService';
+import { fetchProducts } from '@/services/ProductService';
 
 const salesData = [
   { name: 'Jan', total: 1234 },
@@ -35,7 +35,39 @@ const salesData = [
 
 const Admin = () => {
   const [dateRange, setDateRange] = useState<'day' | 'week' | 'month' | 'year'>('month');
-  
+  const [stats, setStats] = useState({
+    products: 0,
+    categories: 0,
+    loading: true,
+    error: null as string | null
+  });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const [categories, productsData] = await Promise.all([
+          fetchCategories(),
+          fetchProducts()
+        ]);
+        
+        setStats({
+          products: productsData.count,
+          categories: categories.length,
+          loading: false,
+          error: null
+        });
+      } catch (err) {
+        setStats(prev => ({
+          ...prev,
+          loading: false,
+          error: err instanceof Error ? err.message : 'Failed to load stats'
+        }));
+      }
+    };
+
+    loadStats();
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -74,8 +106,10 @@ const Admin = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Products</p>
-                        <h3 className="text-2xl font-bold mt-1">{products.length}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">+12 new this month</p>
+                        <h3 className="text-2xl font-bold mt-1">
+                          {stats.loading ? '...' : stats.products}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">Total products</p>
                       </div>
                       <div className="p-2 bg-primary/10 rounded-full">
                         <Package className="h-5 w-5 text-primary" />
@@ -89,8 +123,10 @@ const Admin = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Categories</p>
-                        <h3 className="text-2xl font-bold mt-1">{categories.length}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">+2 new this month</p>
+                        <h3 className="text-2xl font-bold mt-1">
+                          {stats.loading ? '...' : stats.categories}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">Total categories</p>
                       </div>
                       <div className="p-2 bg-primary/10 rounded-full">
                         <List className="h-5 w-5 text-primary" />

@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { CartItem, Product } from '@/lib/data';
+import { CartItem, Product } from '@/lib/utils';
 
 // Fetch the user's cart from Supabase
 export const fetchCart = async (): Promise<CartItem[]> => {

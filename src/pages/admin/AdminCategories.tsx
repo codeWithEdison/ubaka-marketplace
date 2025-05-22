@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, List, Edit, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,53 +9,97 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AdminSidebar from '@/components/AdminSidebar';
-import { Category, categories } from '@/lib/data';
+import { Category } from '@/lib/utils';
+import { fetchCategories, createCategory, updateCategory, deleteCategory } from '@/services/CategoryService';
 
 const AdminCategories = () => {
-  const [categoryList, setCategoryList] = useState<Category[]>(categories);
+  const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      const data = await fetchCategories();
+      setCategoryList(data);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to load categories",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const filteredCategories = categoryList.filter(category => 
     category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (category.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const handleAddCategory = (newCategory: Category) => {
-    setCategoryList(prev => [...prev, newCategory]);
-    setIsAddDialogOpen(false);
-    toast({
-      title: "Category added",
-      description: `${newCategory.name} has been added successfully.`,
-    });
-  };
-  
-  const handleEditCategory = (updatedCategory: Category) => {
-    setCategoryList(prev => 
-      prev.map(category => 
-        category.id === updatedCategory.id ? updatedCategory : category
-      )
-    );
-    setIsEditDialogOpen(false);
-    toast({
-      title: "Category updated",
-      description: `${updatedCategory.name} has been updated successfully.`,
-    });
-  };
-  
-  const handleDeleteCategory = () => {
-    if (selectedCategory) {
-      setCategoryList(prev => prev.filter(category => category.id !== selectedCategory.id));
-      setIsDeleteDialogOpen(false);
+  const handleAddCategory = async (newCategory: Category) => {
+    try {
+      await createCategory(newCategory);
+      await loadCategories();
+      setIsAddDialogOpen(false);
       toast({
-        title: "Category deleted",
-        description: `${selectedCategory.name} has been deleted successfully.`,
+        title: "Category added",
+        description: `${newCategory.name} has been added successfully.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to add category",
         variant: "destructive",
       });
+    }
+  };
+  
+  const handleEditCategory = async (updatedCategory: Category) => {
+    try {
+      await updateCategory(updatedCategory.id, updatedCategory);
+      await loadCategories();
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Category updated",
+        description: `${updatedCategory.name} has been updated successfully.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to update category",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleDeleteCategory = async () => {
+    if (selectedCategory) {
+      try {
+        await deleteCategory(selectedCategory.id);
+        await loadCategories();
+        setIsDeleteDialogOpen(false);
+        toast({
+          title: "Category deleted",
+          description: `${selectedCategory.name} has been deleted successfully.`,
+          variant: "destructive",
+        });
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to delete category",
+          variant: "destructive",
+        });
+      }
     }
   };
   
