@@ -5,28 +5,34 @@ import { ArrowRight, Filter, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ProductCard from './ProductCard';
-import { getFeaturedProducts, getNewProducts, getDiscountedProducts, Product } from '@/lib/data';
+import { Product } from '@/lib/data';
+import { useApiQuery } from '@/hooks/useApi';
+import { fetchProducts } from '@/services/ProductService';
 
 const FeaturedProducts = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
   const [filterType, setFilterType] = useState<'featured' | 'new' | 'discounted'>('featured');
   
-  useEffect(() => {
-    // Fetch the right products based on filter
-    switch (filterType) {
-      case 'new':
-        setProducts(getNewProducts());
-        break;
-      case 'discounted':
-        setProducts(getDiscountedProducts());
-        break;
-      case 'featured':
-      default:
-        setProducts(getFeaturedProducts());
-        break;
+  const { data: featuredData, isLoading: isFeaturedLoading } = useApiQuery(
+    ['products', 'featured', filterType],
+    async () => {
+      switch (filterType) {
+        case 'new':
+          return fetchProducts({ isNew: true, limit: 8 });
+        case 'discounted':
+          return fetchProducts({ minPrice: 0, sortBy: 'discount', sortOrder: 'desc', limit: 8 });
+        case 'featured':
+        default:
+          return fetchProducts({ featured: true, limit: 8 });
+      }
+    },
+    { 
+      keepPreviousData: true,
+      staleTime: 60000 // 1 minute
     }
-  }, [filterType]);
+  );
+  
+  const products = featuredData?.products || [];
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -98,7 +104,16 @@ const FeaturedProducts = () => {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-          {products.length === 0 ? (
+          {isFeaturedLoading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="border rounded-lg p-4 h-80">
+                <div className="w-full h-40 bg-gray-200 rounded animate-pulse mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse mb-2 w-2/3"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse mb-4 w-1/2"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
+              </div>
+            ))
+          ) : products.length === 0 ? (
             <div className="col-span-full py-12 text-center">
               <p className="text-muted-foreground">No products found in this category.</p>
             </div>

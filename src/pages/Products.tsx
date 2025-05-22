@@ -1,10 +1,9 @@
-
-import { useState } from 'react';
-import { products, Product } from '@/lib/data';
+import { useState, useEffect } from 'react';
+import { Product } from '@/lib/data';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
-import { Filter, Check } from 'lucide-react';
+import { Filter, Check, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -14,38 +13,65 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
+import { useApiQuery } from '@/hooks/useApi';
+import { fetchProducts } from '@/services/ProductService';
+import { supabase } from '@/integrations/supabase/client';
 
 const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'featured' | 'price_low' | 'price_high' | 'newest'>('featured');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   
-  // Get unique categories from products
-  const categories = Array.from(new Set(products.map(p => p.category)));
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
-  // Filter products based on search and category
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
-    
-    return matchesSearch && matchesCategory;
-  });
-  
-  // Sort products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch (sortBy) {
-      case 'price_low':
-        return a.price - b.price;
-      case 'price_high':
-        return b.price - a.price;
-      case 'newest':
-        return a.new ? -1 : b.new ? 1 : 0;
-      case 'featured':
-      default:
-        return a.featured ? -1 : b.featured ? 1 : 0;
+  // Fetch categories
+  const { data: categoriesData, isLoading: categoriesLoading } = useApiQuery(
+    ['categories'],
+    async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name');
+        
+      if (error) throw error;
+      return data || [];
     }
-  });
+  );
+  
+  // Fetch products with filters
+  const { data: productsData, isLoading: productsLoading } = useApiQuery(
+    ['products', debouncedSearch, selectedCategory, sortBy],
+    async () => {
+      const sortMapping = {
+        featured: { sortBy: 'featured', sortOrder: 'desc' as const },
+        price_low: { sortBy: 'price', sortOrder: 'asc' as const },
+        price_high: { sortBy: 'price', sortOrder: 'desc' as const },
+        newest: { sortBy: 'created_at', sortOrder: 'desc' as const }
+      };
+      
+      const { sortBy: dbSortBy, sortOrder } = sortMapping[sortBy];
+      
+      return fetchProducts({
+        category: selectedCategory || '',
+        search: debouncedSearch,
+        sortBy: dbSortBy,
+        sortOrder: sortOrder,
+        limit: 24
+      });
+    },
+    { keepPreviousData: true }
+  );
+  
+  const categories = categoriesData || [];
+  const products = productsData?.products || [];
+  const isLoading = categoriesLoading || productsLoading;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,25 +106,32 @@ const Products = () => {
                 
                 <div>
                   <h3 className="font-medium mb-3">Categories</h3>
-                  <div className="space-y-2">
-                    <Button
-                      variant={selectedCategory === null ? "default" : "outline"}
-                      className="w-full justify-start"
-                      onClick={() => setSelectedCategory(null)}
-                    >
-                      All Categories
-                    </Button>
-                    {categories.map((category) => (
+                  {categoriesLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-sm">Loading categories...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
                       <Button
-                        key={category}
-                        variant={selectedCategory === category ? "default" : "outline"}
+                        variant={selectedCategory === null ? "default" : "outline"}
                         className="w-full justify-start"
-                        onClick={() => setSelectedCategory(category)}
+                        onClick={() => setSelectedCategory(null)}
                       >
-                        {category}
+                        All Categories
                       </Button>
-                    ))}
-                  </div>
+                      {categories.map((category) => (
+                        <Button
+                          key={category.id}
+                          variant={selectedCategory === category.id ? "default" : "outline"}
+                          className="w-full justify-start"
+                          onClick={() => setSelectedCategory(category.id)}
+                        >
+                          {category.name}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -106,7 +139,9 @@ const Products = () => {
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-6">
                   <p className="text-muted-foreground">
-                    Showing {sortedProducts.length} {sortedProducts.length === 1 ? 'product' : 'products'}
+                    {isLoading ? 'Loading products...' : 
+                      `Showing ${products.length} ${products.length === 1 ? 'product' : 'products'}`
+                    }
                   </p>
                   
                   <DropdownMenu>
@@ -137,7 +172,18 @@ const Products = () => {
                   </DropdownMenu>
                 </div>
                 
-                {sortedProducts.length === 0 ? (
+                {isLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <div key={index} className="border rounded-lg p-4 h-80">
+                        <div className="w-full h-40 bg-gray-200 rounded animate-pulse mb-4"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-2 w-2/3"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-4 w-1/2"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : products.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">No products found matching your criteria.</p>
                     <Button 
@@ -152,7 +198,7 @@ const Products = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {sortedProducts.map((product, index) => (
+                    {products.map((product, index) => (
                       <ProductCard 
                         key={product.id} 
                         product={product} 

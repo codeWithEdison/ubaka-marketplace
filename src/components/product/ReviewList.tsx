@@ -1,170 +1,147 @@
 
-import React, { useState } from 'react';
-import { ThumbsUp, ThumbsDown, Check, Star } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { fetchReviewsForProduct, Review, voteReview } from '@/services/ReviewService';
+import { useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useApiQuery } from '@/hooks/useApi';
-import { toast } from '@/components/ui/use-toast';
+import { fetchReviewsForProduct, Review } from '@/services/ReviewService';
+import { StarIcon } from 'lucide-react';
 
 interface ReviewListProps {
   productId: string;
 }
 
-const ReviewList: React.FC<ReviewListProps> = ({ productId }) => {
-  const [filter, setFilter] = useState<number | null>(null);
-  
-  const { data: reviews = [], isLoading } = useApiQuery<Review[]>(
-    ['product-reviews', productId],
+const ReviewList = ({ productId }: ReviewListProps) => {
+  const [filter, setFilter] = useState<'all' | 'positive' | 'negative'>('all');
+
+  const { data, isLoading } = useApiQuery<Review[]>(
+    ['reviews', productId],
     () => fetchReviewsForProduct(productId),
     { enabled: !!productId }
   );
+
+  const reviews = data || [];
   
-  const filteredReviews = filter !== null
-    ? reviews.filter(review => review.rating === filter)
-    : reviews;
-  
-  const handleHelpful = async (reviewId: string, isHelpful: boolean) => {
-    try {
-      await voteReview(reviewId, isHelpful);
-      toast({
-        title: "Thanks for your feedback!",
-        description: "Your vote has been recorded.",
-      });
-    } catch (error) {
-      console.error('Error voting on review:', error);
-      toast({
-        title: "Error",
-        description: "There was an issue recording your vote. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const ratings = [5, 4, 3, 2, 1];
-  
+  const filteredReviews = reviews.filter(review => {
+    if (filter === 'positive') return review.rating >= 4;
+    if (filter === 'negative') return review.rating < 4;
+    return true;
+  });
+
+  const averageRating = reviews.length > 0
+    ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
+    : 0;
+
   if (isLoading) {
     return (
-      <div className="py-6">
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <Card key={i}>
-              <CardContent className="pt-6">
-                <div className="flex space-x-2 items-center mb-4">
-                  <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
-                </div>
-                <div className="h-4 w-48 bg-gray-200 animate-pulse rounded mb-3"></div>
-                <div className="h-16 bg-gray-200 animate-pulse rounded mb-4"></div>
-                <div className="flex space-x-2">
-                  <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
-                  <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  
-  if (reviews.length === 0) {
-    return (
-      <div className="py-6 text-center">
-        <p className="text-muted-foreground">No reviews for this product yet. Be the first to leave a review!</p>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        <Button 
-          variant={filter === null ? "default" : "outline"} 
-          size="sm"
-          onClick={() => setFilter(null)}
-        >
-          All Reviews
-        </Button>
-        
-        {ratings.map(rating => {
-          const count = reviews.filter(r => r.rating === rating).length;
-          if (count === 0) return null;
-          
-          return (
-            <Button
-              key={rating}
-              variant={filter === rating ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter(rating === filter ? null : rating)}
-            >
-              {rating} Stars ({count})
-            </Button>
-          );
-        })}
-      </div>
-      
-      <div className="space-y-4">
-        {filteredReviews.map(review => (
-          <Card key={review.id}>
-            <CardContent className="pt-6">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${
-                            i < review.rating
-                              ? "text-yellow-400 fill-yellow-400"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="font-medium">{review.userName}</span>
-                    {review.isVerifiedPurchase && (
-                      <span className="text-xs flex items-center text-green-600">
-                        <Check className="h-3 w-3 mr-1" />
-                        Verified Purchase
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
+      <div className="space-y-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="border rounded-lg p-4">
+            <div className="flex items-center mb-3">
+              <Skeleton className="h-10 w-10 rounded-full mr-3" />
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-1/4" />
               </div>
-              
-              {review.title && (
-                <h4 className="font-medium mt-2">{review.title}</h4>
-              )}
-              
-              <p className="my-3">{review.content}</p>
-              
-              <div className="flex gap-3 mt-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleHelpful(review.id, true)}
-                >
-                  <ThumbsUp className="h-4 w-4 mr-2" />
-                  Helpful ({review.helpfulCount || 0})
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleHelpful(review.id, false)}
-                >
-                  <ThumbsDown className="h-4 w-4 mr-2" />
-                  Not Helpful ({review.notHelpfulCount || 0})
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+            <Skeleton className="h-4 w-2/3 mb-2" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
         ))}
       </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center mb-1">
+            <div className="flex text-amber-400 mr-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <StarIcon
+                  key={star}
+                  className={`h-5 w-5 ${star <= Math.round(averageRating) ? 'fill-current' : 'stroke-current fill-none'}`}
+                />
+              ))}
+            </div>
+            <span className="font-semibold">{averageRating.toFixed(1)} out of 5</span>
+          </div>
+          <p className="text-sm text-muted-foreground">{reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}</p>
+        </div>
+        
+        <div className="flex space-x-2 text-sm">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-3 py-1 rounded-full ${filter === 'all' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'}`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilter('positive')}
+            className={`px-3 py-1 rounded-full ${filter === 'positive' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'}`}
+          >
+            Positive
+          </button>
+          <button
+            onClick={() => setFilter('negative')}
+            className={`px-3 py-1 rounded-full ${filter === 'negative' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'}`}
+          >
+            Negative
+          </button>
+        </div>
+      </div>
+      
+      {filteredReviews.length === 0 ? (
+        <div className="text-center py-8 border rounded-lg">
+          <p>No {filter !== 'all' ? filter : ''} reviews yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {filteredReviews.map((review) => (
+            <div key={review.id} className="border rounded-lg p-4">
+              <div className="flex items-start">
+                <div className="mr-3">
+                  {review.user.avatar ? (
+                    <img src={review.user.avatar} alt={review.user.name} className="h-10 w-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium">
+                      {review.user.name.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-medium">{review.user.name}</h4>
+                      <div className="flex text-amber-400 my-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <StarIcon 
+                            key={star} 
+                            className={`h-4 w-4 ${star <= review.rating ? 'fill-current' : 'stroke-current fill-none'}`} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(review.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  {review.title && <h5 className="font-medium mt-2">{review.title}</h5>}
+                  <p className="mt-1 text-muted-foreground">{review.content}</p>
+                  
+                  {review.is_verified_purchase && (
+                    <div className="mt-2 text-xs inline-block px-2 py-1 bg-green-50 text-green-700 rounded">
+                      Verified Purchase
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

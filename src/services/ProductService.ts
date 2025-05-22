@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/lib/data';
 
@@ -25,7 +26,10 @@ export interface DbProduct {
   }[] | null;
 }
 
-export type ProductCategory = string | { id: string; name: string };
+export type ProductCategory = {
+  id: string;
+  name: string;
+};
 
 export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
   return {
@@ -37,7 +41,10 @@ export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
     category: dbProduct.categories ? {
       id: dbProduct.categories.id,
       name: dbProduct.categories.name
-    } : 'Uncategorized',
+    } : {
+      id: 'uncategorized',
+      name: 'Uncategorized'
+    },
     rating: dbProduct.ratings && dbProduct.ratings[0] ? 
       dbProduct.ratings[0].average_rating || 0 : 0,
     discount: dbProduct.discount || 0,
@@ -46,7 +53,7 @@ export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
     inStock: dbProduct.in_stock !== null ? dbProduct.in_stock : true,
     specifications: dbProduct.specifications || {}
   };
-}
+};
 
 export const fetchProducts = async (
   { 

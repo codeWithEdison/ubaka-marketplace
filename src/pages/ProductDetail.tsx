@@ -98,7 +98,7 @@ const ProductDetail = () => {
                         {product.category.name}
                       </Link>
                     ) : (
-                      <span>{typeof product.category === 'string' ? product.category : 'Uncategorized'}</span>
+                      <span>Uncategorized</span>
                     )}
                   </div>
                   

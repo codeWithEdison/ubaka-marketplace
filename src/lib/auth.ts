@@ -34,8 +34,9 @@ export const isAdmin = async (): Promise<boolean> => {
  * Checks if the current user is authenticated
  * @returns Boolean indicating if the user is logged in
  */
-export const isAuthenticated = (): boolean => {
-  return !!supabase.auth.getUser();
+export const isAuthenticated = async (): Promise<boolean> => {
+  const { data } = await supabase.auth.getSession();
+  return !!data.session;
 };
 
 /**
