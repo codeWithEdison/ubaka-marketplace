@@ -7,16 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getStatusClass, getStatusText, OrderStatus } from './statusUtils';
 import { useApiQuery } from '@/hooks/useApi';
 import { fetchOrders } from '@/services/OrderService';
-
-interface Order {
-  id: string;
-  created_at: string;
-  status: OrderStatus;
-  total: number;
-  shipping_address: any;
-  tracking_number: string | null;
-  estimated_delivery: string | null;
-}
+import { Order, ShippingAddress } from '@/services/OrderService';
+import { formatCurrency } from '@/lib/utils';
 
 const OrderHistory = () => {
   const { data: orders, isLoading } = useApiQuery<Order[]>(
@@ -64,6 +56,8 @@ const OrderHistory = () => {
                   <TableHead>Order ID</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Shipping Address</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -76,6 +70,15 @@ const OrderHistory = () => {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status)}`}>
                         {getStatusText(order.status)}
                       </span>
+                    </TableCell>
+                    <TableCell>{formatCurrency(order.total)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                       {typeof order.shipping_address === 'object' && order.shipping_address !== null
+                      ? `${order.shipping_address.fullName}, ${order.shipping_address.city}`
+                      : typeof order.shipping_address === 'string'
+                      ? order.shipping_address
+                      : 'N/A'
+                    }
                     </TableCell>
                     <TableCell className="text-right">
                       <Link to={`/orders/${order.id}`}>

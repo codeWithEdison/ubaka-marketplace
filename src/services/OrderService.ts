@@ -8,7 +8,7 @@ export interface Order {
   total: number;
   total_amount: number;
   status: OrderStatus;
-  shipping_address: string;
+  shipping_address: ShippingAddress | null;
   tracking_number: string | null;
   created_at: string;
   updated_at: string;
@@ -31,7 +31,7 @@ export interface Order {
     id: string;
     payment_method: string;
     status: string;
-  };
+  } | null;
 }
 
 // Define ShippingAddress interface if it's not already defined in data.ts
