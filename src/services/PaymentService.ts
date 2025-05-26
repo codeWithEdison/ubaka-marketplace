@@ -540,7 +540,7 @@ export const initiatePayment = async (paymentDetails: PaymentDetails): Promise<F
           customizations: {
             title: 'Ubaka Marketplace',
             description: 'Payment for your purchase',
-            logo: 'https://your-logo-url.com/logo.png',
+            logo: '/logo.png', 
           },
           onClose: () => {
             reject(new Error('Payment cancelled by user'));

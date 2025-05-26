@@ -332,7 +332,7 @@ const Checkout = () => {
       // Prepare the PaymentDetails object required by initiatePayment
       const paymentDetails: PaymentDetails = {
         amount: orderDetails.totalAmount,
-        currency: 'NGN',
+        currency: 'RWF',
         email: formData.email,
         name: `${formData.firstName} ${formData.lastName}`,
         payment_type: 'card', // Default to card, but Flutterwave will show all options

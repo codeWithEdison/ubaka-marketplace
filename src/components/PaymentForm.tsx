@@ -25,7 +25,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const paymentSchema = z.object({
   amount: z.number().min(1, 'Amount must be greater than 0'),
-  currency: z.string(),
   email: z.string().email('Invalid email address'),
   phone_number: z.string().optional(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -42,7 +41,6 @@ export function PaymentForm() {
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       amount: 1000,
-      currency: 'NGN',
       email: '',
       name: '',
       payment_type: 'card',
@@ -58,7 +56,7 @@ export function PaymentForm() {
       
       const response = await initiatePayment({
         amount: data.amount,
-        currency: data.currency,
+        currency: 'RWF',
         email: data.email,
         name: data.name,
         payment_type: data.payment_type,
@@ -110,32 +108,6 @@ export function PaymentForm() {
                   min={1}
                 />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="currency"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Currency</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="NGN">Nigerian Naira (NGN)</SelectItem>
-                  <SelectItem value="USD">US Dollar (USD)</SelectItem>
-                  <SelectItem value="EUR">Euro (EUR)</SelectItem>
-                  <SelectItem value="GBP">British Pound (GBP)</SelectItem>
-                  <SelectItem value="KES">Kenyan Shilling (KES)</SelectItem>
-                  <SelectItem value="GHS">Ghanaian Cedi (GHS)</SelectItem>
-                </SelectContent>
-              </Select>
               <FormMessage />
             </FormItem>
           )}
