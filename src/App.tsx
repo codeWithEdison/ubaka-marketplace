@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,6 +26,8 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminSupplyChain from "./pages/admin/AdminSupplyChain";
+import { PaymentCallback } from "./pages/PaymentCallback";
+import TestPayment from "./pages/TestPayment";
 
 // Auth pages
 import SignIn from "./pages/auth/SignIn";
@@ -53,6 +54,10 @@ const AppRoutes = () => (
     <Route path="/cart" element={<Cart />} />
     <Route path="/checkout" element={<AuthGuard><Checkout /></AuthGuard>} />
     <Route path="/order-confirmation" element={<AuthGuard><OrderConfirmation /></AuthGuard>} />
+    
+    {/* Payment routes */}
+    <Route path="/payment-callback" element={<PaymentCallback />} />
+    <Route path="/test-payment" element={<TestPayment />} />
     
     {/* Auth routes */}
     <Route path="/auth/sign-in" element={<SignIn />} />

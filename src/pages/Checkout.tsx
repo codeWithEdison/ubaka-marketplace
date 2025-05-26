@@ -1,6 +1,6 @@
 // src/pages/Checkout.tsx
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   CreditCard, 
@@ -44,12 +44,9 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/utils';
-import paymentService, { 
-  PaymentMethod, 
-  CreditCardData, 
-  MobileMoneyData,
-  OrderDetails
-} from '@/services/PaymentService';
+import * as PaymentServiceTypes from '@/services/PaymentService';
+import { createOrder, finalizeOrderPayment } from '@/services/OrderService';
+import { initiatePayment, PaymentDetails } from '@/services/PaymentService';
 
 interface FormData {
   firstName: string;
@@ -81,9 +78,10 @@ interface CardErrors {
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { items, getTotalPrice, clearCart } = useCart();
   const { toast } = useToast();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit_card');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentServiceTypes.PaymentMethod>('credit_card');
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -126,6 +124,7 @@ const Checkout = () => {
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [cryptoTransactionHash, setCryptoTransactionHash] = useState<string>('');
   const [ethNetwork, setEthNetwork] = useState<string | null>(null);
+  const [cryptoPaymentStatus, setCryptoPaymentStatus] = useState<'success' | 'error' | null>(null);
   
   const formatCardNumber = (value: string): string => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
@@ -169,26 +168,36 @@ const Checkout = () => {
     }
   };
   
+  // Check for cancellation on load
+  useEffect(() => {
+    if (location.state?.paymentCancelled) {
+      setPaymentError('Payment was cancelled.');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
+  
+  // Effect for checking MetaMask
   useEffect(() => {
     const checkMetaMask = async () => {
       setIsMetaMaskInstalled(typeof window.ethereum !== 'undefined');
       
       if (typeof window.ethereum !== 'undefined') {
-        const walletInfo = await paymentService.getConnectedAccounts();
-        
-        if (walletInfo.isConnected && walletInfo.address) {
-          setIsConnected(true);
-          setWalletAddress(walletInfo.address);
-          if (walletInfo.network) {
-            setEthNetwork(walletInfo.network);
+         PaymentServiceTypes.default.getConnectedAccounts().then(walletInfo => {
+          if (walletInfo.isConnected && walletInfo.address) {
+            setIsConnected(true);
+            setWalletAddress(walletInfo.address);
+            if (walletInfo.network) {
+              setEthNetwork(walletInfo.network);
+            }
           }
-        }
+         });
       }
     };
     
     checkMetaMask();
   }, []);
   
+  // Effect for MetaMask event listeners
   useEffect(() => {
     if (!isMetaMaskInstalled) return;
     
@@ -203,13 +212,13 @@ const Checkout = () => {
     };
     
     const handleChainChanged = async (chainId: string) => {
-      const networkName = await paymentService.getConnectedAccounts();
+      const networkName = await PaymentServiceTypes.default.getConnectedAccounts();
       if (networkName.network) {
         setEthNetwork(networkName.network);
       }
     };
     
-    const cleanup = paymentService.registerMetaMaskEvents(
+    const cleanup = PaymentServiceTypes.default.registerMetaMaskEvents(
       handleAccountsChanged,
       handleChainChanged
     );
@@ -228,8 +237,8 @@ const Checkout = () => {
     }
     
     try {
-      const result = await paymentService.connectMetaMaskWallet();
-      
+       const result = await PaymentServiceTypes.default.connectMetaMaskWallet(); // Use PaymentServiceTypes.default
+
       if (result.success && result.address) {
         setWalletAddress(result.address);
         setIsConnected(true);
@@ -255,7 +264,7 @@ const Checkout = () => {
     }
   };
   
-  const getOrderDetails = (): OrderDetails => {
+  const getOrderDetails = (): PaymentServiceTypes.OrderDetails => {
     const totalPrice = getTotalPrice();
     const shipping = totalPrice > 0 ? 4.99 : 0;
     
@@ -284,158 +293,81 @@ const Checkout = () => {
     };
   };
   
-  const processCreditCardPayment = async () => {
-    const cardNumberCleaned = formData.cardNumber.replace(/\s+/g, '');
-    const errors = {
-      cardNumber: !cardNumberCleaned || !/^\d{16}$/.test(cardNumberCleaned) ? 'Card number must be 16 digits' : '',
-      cardExpiry: !formData.cardExpiry || !/^\d{2}\/\d{2}$/.test(formData.cardExpiry) ? 'Expiry must be in MM/YY format' : '',
-      cardCvc: !formData.cardCvc || !/^\d{3}$/.test(formData.cardCvc) ? 'CVC must be 3 digits' : '',
-    };
+  const handleFiatPayment = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent form submission
     
-    setCardErrors(errors);
-    
-    if (errors.cardNumber || errors.cardExpiry || errors.cardCvc) {
+    // Basic validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phoneNumber || !formData.address || !formData.city || !formData.state || !formData.zipCode || !formData.country) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required contact and shipping details.",
+        variant: "destructive"
+      });
       return;
     }
-    
+
     setIsPaymentProcessing(true);
-    setPaymentStatus(null);
-    
+    setPaymentError(null);
+
     try {
-      const cardData: CreditCardData = {
-        cardNumber: formData.cardNumber,
-        cardExpiry: formData.cardExpiry,
-        cardCvc: formData.cardCvc
-      };
-      
       const orderDetails = getOrderDetails();
-      const result = await paymentService.processCardPayment(cardData, orderDetails);
-      
-      if (result.success) {
-        setOrderReference(result.orderReference);
-        setPaymentStatus('success');
-        
-        setTimeout(() => {
-          clearCart();
-          navigate('/order-confirmation', { 
-            state: { 
-              orderReference: result.orderReference,
-              paymentMethod: 'credit_card',
-              transactionId: result.transactionId
-            } 
-          });
-        }, 1500);
-      } else {
-        setPaymentStatus('error');
-        setPaymentError(result.error || 'Transaction failed. Please try a different payment method.');
-      }
-    } catch (error) {
-      setPaymentStatus('error');
-      setPaymentError(error instanceof Error ? error.message : 'An unexpected error occurred');
-    } finally {
-      setIsPaymentProcessing(false);
-    }
-  };
-  
-  const processMobileMoneyPayment = async () => {
-    if (!formData.momoNumber) {
-      toast({
-        title: "Mobile number required",
-        description: "Please enter your mobile money number",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsPaymentProcessing(true);
-    
-    try {
-      const mobileData: MobileMoneyData = {
-        momoNumber: formData.momoNumber,
-        momoProvider: formData.momoProvider
-      };
-      
-      const orderDetails = getOrderDetails();
-      const result = await paymentService.sendMobileMoneyVerification(mobileData, orderDetails);
-      
-      if (result.success) {
-        setMomoVerificationSent(true);
-        
-        toast({
-          title: "Verification code sent",
-          description: `A verification code has been sent to ${formData.momoNumber}`,
-        });
-      } else {
-        toast({
-          title: "Failed to send code",
-          description: result.error || "Unable to send verification code. Please try again.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Failed to send code",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive"
-      });
-    } finally {
-      setIsPaymentProcessing(false);
-    }
-  };
-  
-  const verifyMomoCode = async () => {
-    if (!momoVerificationCode) {
-      toast({
-        title: "Verification code required",
-        description: "Please enter the verification code sent to your phone",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setMomoVerifying(true);
-    
-    try {
-      const mobileData: MobileMoneyData = {
-        momoNumber: formData.momoNumber,
-        momoProvider: formData.momoProvider
-      };
-      
-      const orderDetails = getOrderDetails();
-      const result = await paymentService.verifyMobileMoneyPayment(
-        momoVerificationCode,
-        mobileData,
-        orderDetails
+
+      // Create the order in pending state before initiating payment
+      const createdOrder = await createOrder(
+        items,
+        {
+          fullName: `${formData.firstName} ${formData.lastName}`,
+          addressLine1: formData.address,
+          city: formData.city,
+          state: formData.state,
+          postalCode: formData.zipCode,
+          country: formData.country,
+          phone: formData.phoneNumber,
+        },
+        'flutterwave'
       );
-      
-      if (result.success) {
-        setOrderReference(result.orderReference);
-        setPaymentStatus('success');
-        
-        setTimeout(() => {
-          clearCart();
-          navigate('/order-confirmation', { 
-            state: { 
-              orderReference: result.orderReference,
-              paymentMethod: 'mobile_money',
-              transactionId: result.transactionId
-            } 
-          });
-        }, 1500);
-      } else {
-        setPaymentStatus('error');
-        setPaymentError(result.error || 'Verification failed. Please try again.');
-      }
+
+      const tx_ref = `TX-${Date.now()}-${createdOrder.id}`;
+
+      // Prepare the PaymentDetails object required by initiatePayment
+      const paymentDetails: PaymentDetails = {
+        amount: orderDetails.totalAmount,
+        currency: 'NGN',
+        email: formData.email,
+        name: `${formData.firstName} ${formData.lastName}`,
+        payment_type: 'card', // Default to card, but Flutterwave will show all options
+        phone_number: formData.phoneNumber,
+        tx_ref,
+      };
+
+      // Initiate Flutterwave payment
+      await initiatePayment(paymentDetails);
+
     } catch (error) {
-      setPaymentStatus('error');
-      setPaymentError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while preparing payment.';
+      setPaymentError(errorMessage);
+      toast({
+        title: 'Payment Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
-      setMomoVerifying(false);
+      setIsPaymentProcessing(false);
     }
   };
-  
-  const sendCryptoPayment = async () => {
-    if (!isConnected) {
+
+  const handleCryptoPayment = async () => {
+     // Basic validation
+     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phoneNumber || !formData.address || !formData.city || !formData.state || !formData.zipCode || !formData.country) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required contact and shipping details.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!isConnected || !walletAddress) {
       toast({
         title: "Wallet not connected",
         description: "Please connect your MetaMask wallet first.",
@@ -443,38 +375,69 @@ const Checkout = () => {
       });
       return;
     }
-    
+
     setIsPaymentProcessing(true);
-    setPaymentStatus(null);
-    
+    setCryptoPaymentStatus(null);
+
     try {
       const orderDetails = getOrderDetails();
-      const result = await paymentService.processCryptoPayment(walletAddress, orderDetails);
-      
+
+       // Create the order in pending state before initiating payment
+       const createdOrder = await createOrder(
+         items,
+         {
+           fullName: `${formData.firstName} ${formData.lastName}`,
+           addressLine1: formData.address,
+           city: formData.city,
+           state: formData.state,
+           postalCode: formData.zipCode,
+           country: formData.country,
+           phone: formData.phoneNumber,
+         },
+         'crypto' // Indicate intended payment method
+       );
+
+       const result = await PaymentServiceTypes.default.processCryptoPayment(walletAddress, orderDetails); // Use PaymentServiceTypes.default
+
       if (result.success) {
-        setOrderReference(result.orderReference);
         setCryptoTransactionHash(result.transactionId || '');
-        setPaymentStatus('success');
-        
+        setCryptoPaymentStatus('success');
+
         toast({
           title: "Payment sent!",
           description: `Transaction has been submitted: ${result.transactionId?.slice(0, 10)}...${result.transactionId?.slice(-8)}`,
         });
-        
-        setTimeout(() => {
+
+        // Finalize the order payment on backend
+        try {
+          await finalizeOrderPayment(
+            createdOrder.id,
+            'crypto',
+            undefined,
+            result.transactionId
+          );
+
+          // Clear cart and navigate after successful finalization
           clearCart();
-          navigate('/order-confirmation', { 
-            state: { 
-              orderReference: result.orderReference,
+          navigate('/order-confirmation', {
+            state: {
+              orderId: createdOrder.id,
               paymentMethod: 'crypto',
               transactionHash: result.transactionId
-            } 
+            }
           });
-        }, 1500);
+
+        } catch (finalizeError) {
+           console.error('Error finalizing crypto order on backend:', finalizeError);
+           setCryptoPaymentStatus('error');
+           setPaymentError(finalizeError instanceof Error ? finalizeError.message : 'An error occurred while finalizing your crypto order.');
+           // You might want to leave the order in pending/needs-manual-review state on backend
+        }
+
       } else {
-        setPaymentStatus('error');
+        setCryptoPaymentStatus('error');
         setPaymentError(result.error || "Transaction failed. Please try again.");
-        
+
         toast({
           title: "Payment failed",
           description: result.error || "Transaction failed. Please try again.",
@@ -483,9 +446,9 @@ const Checkout = () => {
       }
     } catch (error) {
       console.error("Error sending payment:", error);
-      setPaymentStatus('error');
+      setCryptoPaymentStatus('error');
       setPaymentError(error instanceof Error ? error.message : "An unexpected error occurred");
-      
+
       toast({
         title: "Payment failed",
         description: error instanceof Error ? error.message : "Transaction failed. Please try again.",
@@ -496,71 +459,9 @@ const Checkout = () => {
     }
   };
   
-  const handlePaymentSuccess = (result: { 
-    success: boolean; 
-    orderReference: string; 
-    transactionId?: string; 
-  }) => {
-    setOrderReference(result.orderReference);
-    setPaymentStatus('success');
-    
-    setTimeout(() => {
-      clearCart();
-      navigate('/order-confirmation', { 
-        state: { 
-          orderReference: result.orderReference,
-          paymentMethod,
-          transactionId: result.transactionId,
-          items: getOrderDetails().items,
-          totalAmount: getTotalPrice(),
-          shipping: getTotalPrice() > 0 ? 4.99 : 0,
-          customerInfo: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email
-          }
-        } 
-      });
-    }, 1500);
-  };
-  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    switch (paymentMethod) {
-      case 'credit_card':
-        processCreditCardPayment();
-        break;
-        
-      case 'mobile_money':
-        if (!momoVerificationSent) {
-          processMobileMoneyPayment();
-        } else {
-          verifyMomoCode();
-        }
-        break;
-        
-      case 'crypto':
-        if (isMetaMaskInstalled && isConnected) {
-          sendCryptoPayment();
-        } else if (isMetaMaskInstalled) {
-          connectWallet();
-        } else {
-          toast({
-            title: "MetaMask not installed",
-            description: "Please install MetaMask browser extension to pay with Ethereum.",
-            variant: "destructive"
-          });
-        }
-        break;
-        
-      default:
-        toast({
-          title: "Payment method not supported",
-          description: "Please select a different payment method",
-          variant: "destructive"
-        });
-    }
+    // Form submission is now handled by the Proceed to Payment button
   };
   
   const totalPrice = getTotalPrice();
@@ -750,322 +651,82 @@ const Checkout = () => {
                   <div className="p-6">
                     <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
                     
-                    <Tabs defaultValue="credit_card" onValueChange={(value) => setPaymentMethod(value as PaymentMethod)} className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="credit_card" className="flex items-center">
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          <span className="hidden sm:inline">Credit Card</span>
-                          <span className="sm:hidden">Card</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="mobile_money" className="flex items-center">
-                          <Smartphone className="mr-2 h-4 w-4" />
-                          <span className="hidden sm:inline">Mobile Money</span>
-                          <span className="sm:hidden">MoMo</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="crypto" className="flex items-center">
-                          <Bitcoin className="mr-2 h-4 w-4" />
-                          <span className="hidden sm:inline">Ethereum</span>
-                          <span className="sm:hidden">ETH</span>
-                        </TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="credit_card" className="pt-4">
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="cardNumber">Card Number</Label>
-                            <Input 
-                              id="cardNumber" 
-                              name="cardNumber"
-                              value={formData.cardNumber}
-                              onChange={handleInputChange}
-                              placeholder="1234 5678 9012 3456" 
-                              required={paymentMethod === 'credit_card'} 
-                              className={cardErrors.cardNumber ? "border-red-500" : ""}
-                            />
-                            {cardErrors.cardNumber && (
-                              <p className="text-sm text-red-500 mt-1">{cardErrors.cardNumber}</p>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="cardExpiry">Expiry Date</Label>
-                              <Input 
-                                id="cardExpiry" 
-                                name="cardExpiry"
-                                value={formData.cardExpiry}
-                                onChange={handleInputChange}
-                                placeholder="MM/YY" 
-                                required={paymentMethod === 'credit_card'}
-                                className={cardErrors.cardExpiry ? "border-red-500" : ""} 
-                              />
-                              {cardErrors.cardExpiry && (
-                                <p className="text-sm text-red-500 mt-1">{cardErrors.cardExpiry}</p>
-                              )}
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor="cardCvc">CVC</Label>
-                              <Input 
-                                id="cardCvc" 
-                                name="cardCvc"
-                                value={formData.cardCvc}
-                                onChange={handleInputChange}
-                                placeholder="123" 
-                                required={paymentMethod === 'credit_card'}
-                                className={cardErrors.cardCvc ? "border-red-500" : ""} 
-                              />
-                              {cardErrors.cardCvc && (
-                                <p className="text-sm text-red-500 mt-1">{cardErrors.cardCvc}</p>
-                              )}
+                    <div className="space-y-4">
+                      <Alert className="bg-blue-50 border-blue-200">
+                        <AlertTitle>Choose Payment Method</AlertTitle>
+                        <AlertDescription className="space-y-2">
+                          <p>Select your preferred payment method:</p>
+                        </AlertDescription>
+                      </Alert>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Flutterwave Payment Option */}
+                        <div className="border rounded-lg p-4 hover:border-primary cursor-pointer" onClick={handleFiatPayment}>
+                          <div className="flex items-center space-x-3">
+                            <CreditCard className="h-6 w-6" />
+                            <div>
+                              <h3 className="font-medium">Pay with Card/Mobile Money</h3>
+                              <p className="text-sm text-muted-foreground">Visa, Mastercard, Mobile Money</p>
                             </div>
                           </div>
-                          
-                          {paymentMethod === 'credit_card' && paymentStatus === 'success' && (
-                            <Alert className="bg-green-50 border-green-300">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                              <AlertTitle className="text-green-600">Payment Successful</AlertTitle>
-                              <AlertDescription>
-                                Payment processed successfully. Order reference: {orderReference}
-                              </AlertDescription>
-                            </Alert>
-                          )}
-                          
-                          {paymentMethod === 'credit_card' && paymentStatus === 'error' && (
-                            <Alert className="bg-red-50 border-red-300">
-                              <AlertCircle className="h-4 w-4 text-red-600" />
-                              <AlertTitle className="text-red-600">Payment Failed</AlertTitle>
-                              <AlertDescription>
-                                {paymentError || "There was an error processing your payment."}
-                              </AlertDescription>
-                            </Alert>
-                          )}
                         </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="mobile_money" className="pt-4">
-                        <div className="space-y-4">
-                          {!momoVerificationSent ? (
-                            <>
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="momoProvider">Provider</Label>
-                                  <Select
-                                    value={formData.momoProvider}
-                                    onValueChange={(value) => setFormData(prev => ({ ...prev, momoProvider: value as 'mtn' | 'airtel' | 'tigo' }))}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select provider" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="mtn">MTN Mobile Money</SelectItem>
-                                      <SelectItem value="airtel">Airtel Money</SelectItem>
-                                      <SelectItem value="tigo">Tigo Cash</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="momoNumber">Mobile Money Number</Label>
-                                  <Input 
-                                    id="momoNumber" 
-                                    name="momoNumber"
-                                    value={formData.momoNumber}
-                                    onChange={handleInputChange}
-                                    placeholder="078XXXXXXX" 
-                                    required={paymentMethod === 'mobile_money'} 
-                                  />
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                  You will receive a verification code on your mobile number.
-                                </p>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <Alert className="bg-blue-50 border-blue-200">
-                                <AlertTitle>Verification Code Sent</AlertTitle>
-                                <AlertDescription>
-                                  A verification code has been sent to {formData.momoNumber}
-                                </AlertDescription>
-                              </Alert>
-                              
-                              <div className="space-y-2 mt-4">
-                                <Label htmlFor="verificationCode">Verification Code</Label>
-                                <Input 
-                                  id="verificationCode" 
-                                  value={momoVerificationCode}
-                                  onChange={(e) => setMomoVerificationCode(e.target.value)}
-                                  placeholder="Enter code" 
-                                  required
-                                />
-                              </div>
-                              
-                              <div className="flex justify-between items-center">
-                                <Button 
-                                  type="button" 
-                                  variant="outline"
-                                  onClick={() => setMomoVerificationSent(false)}
-                                >
-                                  Change Number
-                                </Button>
-                                
-                                <Button 
-                                  type="button"
-                                  onClick={verifyMomoCode}
-                                  disabled={momoVerifying || !momoVerificationCode}
-                                >
-                                  {momoVerifying ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Verifying...
-                                    </>
-                                  ) : (
-                                    'Verify & Pay'
-                                  )}
-                                </Button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="crypto" className="pt-4">
-                        <div className="space-y-4">
-                          {isMetaMaskInstalled ? (
-                            <div className="space-y-4">
-                              {!isConnected ? (
-                                <>
-                                  <div className="p-4 rounded-md bg-muted">
-                                    <p className="font-medium mb-2">Connect your MetaMask wallet to pay with Ethereum</p>
-                                    <p className="text-sm text-muted-foreground mb-3">
-                                      Pay directly from your wallet with a single click after connecting
-                                    </p>
-                                    <Button 
-                                      type="button" 
-                                      onClick={connectWallet}
-                                      className="w-full"
-                                    >
-                                      <Wallet className="mr-2 h-4 w-4" />
-                                      Connect MetaMask
-                                    </Button>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="p-4 rounded-md bg-muted">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <p className="font-medium">Connected Wallet</p>
-                                      <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                                        Connected
-                                      </span>
-                                    </div>
-                                    <p className="text-xs break-all font-mono mb-2">
-                                      {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                                    </p>
-                                    {ethNetwork && (
-                                      <p className="text-xs text-muted-foreground mb-2">
-                                        Network: {ethNetwork}
-                                      </p>
-                                    )}
-                                    <Separator className="my-3" />
-                                    <p className="font-medium mb-2">Payment Details:</p>
-                                    <p className="text-sm mb-1">Amount: {formatCurrency(orderTotal)}</p>
-                                    <p className="text-sm mb-3">ETH: {(orderTotal / 3500000).toFixed(6)} ETH</p>
-                                    <p className="text-xs text-muted-foreground mb-4">
-                                      You'll be prompted to confirm this transaction in MetaMask
-                                    </p>
-                                    
-                                    {paymentStatus === 'success' && (
-                                      <Alert className="bg-green-50 border-green-300 mb-2">
-                                        <CheckCircle className="h-4 w-4 text-green-600" />
-                                        <AlertTitle className="text-green-600">Transaction Sent</AlertTitle>
-                                        <AlertDescription>
-                                          <p>Transaction hash: {cryptoTransactionHash.slice(0, 10)}...{cryptoTransactionHash.slice(-8)}</p>
-                                          <p className="mt-1">Order reference: {orderReference}</p>
-                                        </AlertDescription>
-                                      </Alert>
-                                    )}
-                                    
-                                    {paymentStatus === 'error' && (
-                                      <Alert className="bg-red-50 border-red-300 mb-2">
-                                        <AlertCircle className="h-4 w-4 text-red-600" />
-                                        <AlertTitle className="text-red-600">Transaction Failed</AlertTitle>
-                                        <AlertDescription>
-                                          {paymentError || "There was an error processing your transaction."}
-                                        </AlertDescription>
-                                      </Alert>
-                                    )}
-                                  </div>
-                                </>
-                              )}
+
+                        {/* Crypto Payment Option */}
+                        <div className="border rounded-lg p-4 hover:border-primary cursor-pointer" onClick={handleCryptoPayment}>
+                          <div className="flex items-center space-x-3">
+                            <Bitcoin className="h-6 w-6" />
+                            <div>
+                              <h3 className="font-medium">Pay with Crypto</h3>
+                              <p className="text-sm text-muted-foreground">Ethereum (ETH)</p>
                             </div>
-                          ) : (
-                            <>
-                              <div className="p-4 rounded-md bg-muted">
-                                <p className="font-medium mb-2">MetaMask not detected</p>
-                                <p className="text-sm text-muted-foreground mb-3">
-                                  To pay with Ethereum, please install the MetaMask browser extension
-                                </p>
-                                <a 
-                                  href="https://metamask.io/download/" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="inline-block"
-                                >
-                                  <Button type="button" variant="outline">
-                                    <Wallet className="mr-2 h-4 w-4" />
-                                    Install MetaMask
-                                  </Button>
-                                </a>
-                                <Separator className="my-4" />
-                                <div className="space-y-2">
-                                  <Label htmlFor="ethAddress">Your Ethereum Address (Optional)</Label>
-                                  <Input 
-                                    id="ethAddress" 
-                                    name="ethAddress"
-                                    value={formData.ethAddress}
-                                    onChange={handleInputChange}
-                                    placeholder="0x..." 
-                                  />
-                                </div>
-                                <div className="mt-3">
-                                  <p className="font-medium mb-2">Manual Payment:</p>
-                                  <p className="text-xs break-all font-mono">0x742d35Cc6634C0532925a3b844Bc454e4438f44e</p>
-                                  <p className="text-sm mt-2">Amount: {(orderTotal / 3500000).toFixed(6)} ETH</p>
-                                </div>
-                              </div>
-                            </>
-                          )}
+                          </div>
                         </div>
-                      </TabsContent>
-                    </Tabs>
+                      </div>
+
+                      {paymentStatus === 'success' && (
+                        <Alert className="bg-green-50 border-green-300">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <AlertTitle className="text-green-600">Payment Successful</AlertTitle>
+                          <AlertDescription>
+                            Payment processed successfully. Order reference: {orderReference}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      {paymentStatus === 'error' && (
+                        <Alert className="bg-red-50 border-red-300">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <AlertTitle className="text-red-600">Payment Failed</AlertTitle>
+                          <AlertDescription>
+                            {paymentError || "There was an error processing your payment."}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Crypto Payment Status */}
+                      {cryptoPaymentStatus === 'success' && (
+                        <Alert className="bg-green-50 border-green-300">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <AlertTitle className="text-green-600">Transaction Sent</AlertTitle>
+                          <AlertDescription>
+                            <p>Transaction hash: {cryptoTransactionHash.slice(0, 10)}...{cryptoTransactionHash.slice(-8)}</p>
+                            <p className="mt-1">Order reference: {orderReference}</p>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      {cryptoPaymentStatus === 'error' && (
+                        <Alert className="bg-red-50 border-red-300">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <AlertTitle className="text-red-600">Transaction Failed</AlertTitle>
+                          <AlertDescription>
+                            {paymentError || "There was an error processing your transaction."}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
                   </div>
                 </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full md:w-auto"
-                  disabled={
-                    isPaymentProcessing || 
-                    (paymentMethod === 'crypto' && isMetaMaskInstalled && !isConnected) || 
-                    (paymentMethod === 'mobile_money' && momoVerificationSent && !momoVerificationCode)
-                  }
-                >
-                  {isPaymentProcessing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing
-                    </>
-                  ) : (
-                    <>
-                      {paymentMethod === 'credit_card' && <CreditCard className="mr-2 h-4 w-4" />}
-                      {paymentMethod === 'mobile_money' && <Smartphone className="mr-2 h-4 w-4" />}
-                      {paymentMethod === 'crypto' && <Bitcoin className="mr-2 h-4 w-4" />}
-                      {paymentMethod === 'mobile_money' && momoVerificationSent ? 'Verify & Pay' : 'Place Order'}
-                    </>
-                  )}
-                </Button>
               </form>
             </div>
             

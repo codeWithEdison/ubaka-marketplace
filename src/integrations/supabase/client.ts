@@ -8,4 +8,31 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Create Supabase client with proper configuration
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+    },
+    db: {
+        schema: 'public'
+    },
+    global: {
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_PUBLISHABLE_KEY
+        }
+    }
+});
+
+// Helper function to handle Supabase errors
+export const handleSupabaseError = (error: any) => {
+    console.error('Supabase Error:', error);
+    if (error.code === 'PGRST301') {
+        throw new Error('Authentication required');
+    }
+    if (error.code === 'PGRST404') {
+        throw new Error('Resource not found');
+    }
+    throw new Error(error.message || 'An error occurred with the database');
+};

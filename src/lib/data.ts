@@ -15,3 +15,8 @@ export interface Product {
   inStock: boolean;
   specifications: Record<string, any>;
 }
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+}
