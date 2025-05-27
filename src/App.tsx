@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./contexts/CartContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import AuthGuard from "./components/auth/AuthGuard";
+import AIChat from "./components/AIChat";
 
 import Index from "./pages/Index";
 import Products from "./pages/Products";
@@ -86,6 +87,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <AppRoutes />
+            <AIChat />
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>
