@@ -252,13 +252,8 @@ const CategoryForm = ({ category, onSubmit }: CategoryFormProps) => {
   const [formData, setFormData] = useState<Category>(defaultCategory);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    
-    if (type === 'number') {
-      setFormData(prev => ({ ...prev, [name]: parseInt(value) }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -285,11 +280,10 @@ const CategoryForm = ({ category, onSubmit }: CategoryFormProps) => {
           <textarea 
             id="description" 
             name="description" 
-            value={formData.description} 
+            value={formData.description || ''} 
             onChange={handleInputChange} 
             rows={3} 
             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            required
           />
         </div>
         
@@ -298,20 +292,7 @@ const CategoryForm = ({ category, onSubmit }: CategoryFormProps) => {
           <Input 
             id="image" 
             name="image" 
-            value={formData.image} 
-            onChange={handleInputChange} 
-            required 
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="count">Product Count</Label>
-          <Input 
-            id="count" 
-            name="count" 
-            type="number" 
-            min="0" 
-            value={formData.count} 
+            value={formData.image || ''} 
             onChange={handleInputChange} 
             required 
           />

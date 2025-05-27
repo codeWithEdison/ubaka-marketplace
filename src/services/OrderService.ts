@@ -1,38 +1,8 @@
 import { supabase, handleSupabaseError } from '@/integrations/supabase/client';
 import { CartItem } from '@/lib/data.ts';
-import { Order as DatabaseOrder, OrderStatus } from '@/types/database';
-
-export interface Order {
-  id: string;
-  user_id: string;
-  total: number;
-  total_amount: number;
-  status: OrderStatus;
-  shipping_address: ShippingAddress | null;
-  tracking_number: string | null;
-  created_at: string;
-  updated_at: string;
-  order_items: {
-    id: string;
-    quantity: number;
-    price: number;
-    products: {
-      id: string;
-      name: string;
-    };
-  }[];
-  user: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-  payment: {
-    id: string;
-    payment_method: string;
-    status: string;
-  } | null;
-}
+import { OrderStatus } from '@/types/database';
+import { Order, DbOrder, RawOrder } from '@/lib/utils';
+import { Json } from '@/integrations/supabase/types';
 
 // Define ShippingAddress interface if it's not already defined in data.ts
 export interface ShippingAddress {
@@ -44,6 +14,13 @@ export interface ShippingAddress {
   postalCode: string;
   country: string;
   phone: string;
+}
+
+interface UserData {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 // Fetch all orders for the current user
@@ -75,32 +52,40 @@ export const fetchOrders = async () => {
 };
 
 // Fetch a specific order by ID
-export const fetchOrderById = async (orderId: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('Authentication required to fetch order');
-  }
-
+export const fetchOrderById = async (orderId: string): Promise<Order> => {
   const { data, error } = await supabase
     .from('orders')
     .select(`
       *,
-      order_items:order_items(
+      order_items (
         id,
         quantity,
         price,
-        products:product_id(*)
+        products (
+          id,
+          name
+        )
+      ),
+      user:user_id (
+        id,
+        first_name,
+        last_name,
+        email
+      ),
+      payment:payment_intent_id (
+        id,
+        payment_method,
+        status
       )
     `)
     .eq('id', orderId)
-    .eq('user_id', user.id)
-    .maybeSingle();
+    .single();
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data;
+  return data as Order;
 };
 
 // Create a new order from cart items and return the created order
@@ -307,86 +292,66 @@ export const finalizeOrderPayment = async (orderId: string, paymentMethod: strin
 
 // Update an order status
 export const updateOrderStatus = async (orderId: string, status: OrderStatus, trackingNumber?: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('Authentication required to update order');
+  const updateData: Partial<DbOrder> = {
+    status,
+    updated_at: new Date().toISOString()
+  };
+
+  if (trackingNumber) {
+    updateData.tracking_number = trackingNumber;
   }
 
-  // Check if user is admin (only admins should update order status)
-  const { data: userRole } = await supabase
-    .from('user_roles')
+  const { data, error } = await supabase
+    .from('orders')
+    .update(updateData)
+    .eq('id', orderId)
     .select()
-    .eq('user_id', user.id)
-    .eq('role', 'admin')
-    .maybeSingle();
+    .single();
 
-  if (!userRole) {
-    throw new Error('Admin privileges required to update order status');
+  if (error) {
+    throw new Error(error.message);
   }
 
-  // Fetch the current order to get the user_id
+  // Create notification for the user
   const { data: order } = await supabase
     .from('orders')
     .select('user_id')
     .eq('id', orderId)
     .single();
 
-  if (!order) {
-    throw new Error('Order not found');
+  if (order) {
+    let notificationMessage = '';
+    switch (status) {
+      case 'processing':
+        notificationMessage = 'Your order is now being processed';
+        break;
+      case 'shipped':
+        notificationMessage = trackingNumber
+          ? `Your order has been shipped with tracking number ${trackingNumber}`
+          : 'Your order has been shipped';
+        break;
+      case 'delivered':
+        notificationMessage = 'Your order has been delivered';
+        break;
+      case 'cancelled':
+        notificationMessage = 'Your order has been cancelled';
+        break;
+      default:
+        notificationMessage = `Your order status has been updated to ${status}`;
+    }
+
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: order.user_id,
+        type: 'order_status',
+        title: 'Order Status Updated',
+        message: notificationMessage,
+        data: { order_id: orderId }
+      });
   }
 
-  // Update the order status
-  const updateData: any = { status };
-  if (trackingNumber) {
-    updateData.tracking_number = trackingNumber;
-  }
-
-  const { error } = await supabase
-    .from('orders')
-    .update(updateData)
-    .eq('id', orderId);
-
-  if (error) {
-    throw new Error(`Error updating order status: ${error.message}`);
-  }
-
-  // Create notification for the user
-  let notificationMessage = '';
-
-  switch (status) {
-    case 'processing':
-      notificationMessage = 'Your order is now being processed';
-      break;
-    case 'shipped':
-      notificationMessage = trackingNumber
-        ? `Your order has been shipped with tracking number ${trackingNumber}`
-        : 'Your order has been shipped';
-      break;
-    case 'delivered':
-      notificationMessage = 'Your order has been delivered';
-      break;
-    case 'cancelled':
-      notificationMessage = 'Your order has been cancelled';
-      break;
-    default:
-      notificationMessage = `Your order status has been updated to ${status}`;
-  }
-
-  const { error: notificationError } = await supabase
-    .from('notifications')
-    .insert({
-      user_id: order.user_id,
-      type: 'order_status',
-      title: 'Order Status Updated',
-      message: notificationMessage,
-      data: { order_id: orderId }
-    });
-
-  if (notificationError) {
-    console.error('Error creating notification:', notificationError);
-  }
-
-  return { success: true };
+  return data as Order;
 };
 
 // Cancel an order - can be done by the user or an admin
@@ -396,39 +361,126 @@ export const cancelOrder = async (orderId: string) => {
 
 // Fetch all orders (admin only)
 export const fetchAllOrders = async (): Promise<Order[]> => {
-  const { data: orders, error } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      order_items (
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
         id,
-        quantity,
-        price,
-        products (
-          id,
-          name
-        )
-      ),
-      user (
-        id,
-        first_name,
-        last_name,
-        email
-      ),
-      payment (
-        id,
+        user_id,
+        total,
+        shipping_address,
         payment_method,
-        status
-      )
-    `)
-    .order('created_at', { ascending: false });
+        status,
+        payment_intent_id,
+        tracking_number,
+        created_at,
+        updated_at,
+        order_items (
+          id,
+          quantity,
+          price,
+          products (
+            id,
+            name
+          )
+        )
+      `)
+      .order('created_at', { ascending: false });
 
-  if (error) throw error;
+    if (error) {
+      console.error('Error fetching orders:', error);
+      throw new Error(error.message);
+    }
 
-  return (orders.map(order => ({
-    ...order,
-    total_amount: order.total,
-    status: order.status as OrderStatus,
-    shipping_address: JSON.stringify(order.shipping_address)
-  })) as unknown) as Order[];
+    if (!data || !Array.isArray(data)) {
+      console.error('Invalid data format received:', data);
+      return [];
+    }
+
+    return data.map(order => {
+      try {
+        // Extract user info from shipping address
+        const shippingAddress = order.shipping_address as {
+          fullName: string;
+          email?: string;
+          phone: string;
+          addressLine1: string;
+          city: string;
+          state: string;
+          country: string;
+          postalCode: string;
+        };
+
+        // Split fullName into first and last name
+        const nameParts = shippingAddress.fullName.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        return {
+          id: order.id,
+          user_id: order.user_id,
+          total: order.total,
+          total_amount: order.total,
+          status: order.status,
+          shipping_address: order.shipping_address,
+          tracking_number: order.tracking_number,
+          payment_intent_id: order.payment_intent_id,
+          payment_method: order.payment_method,
+          notes: null,
+          estimated_delivery: null,
+          created_at: order.created_at,
+          updated_at: order.updated_at,
+          order_items: order.order_items.map(item => ({
+            id: item.id,
+            quantity: item.quantity,
+            price: item.price,
+            products: {
+              id: item.products[0].id,
+              name: item.products[0].name
+            }
+          })),
+          user: {
+            id: order.user_id,
+            email: shippingAddress.email || '',
+            first_name: firstName,
+            last_name: lastName
+          },
+          payment: order.payment_intent_id ? {
+            id: order.payment_intent_id,
+            payment_method: order.payment_method || '',
+            status: order.status
+          } : null
+        };
+      } catch (err) {
+        console.error('Error processing order:', order.id, err);
+        // Return a minimal valid order object to prevent complete failure
+        return {
+          id: order.id,
+          user_id: order.user_id,
+          total: order.total,
+          total_amount: order.total,
+          status: order.status,
+          shipping_address: order.shipping_address,
+          tracking_number: order.tracking_number,
+          payment_intent_id: order.payment_intent_id,
+          payment_method: order.payment_method,
+          notes: null,
+          estimated_delivery: null,
+          created_at: order.created_at,
+          updated_at: order.updated_at,
+          order_items: [],
+          user: {
+            id: order.user_id,
+            email: '',
+            first_name: '',
+            last_name: ''
+          },
+          payment: null
+        };
+      }
+    });
+  } catch (err) {
+    console.error('Error in fetchAllOrders:', err);
+    throw new Error(err instanceof Error ? err.message : 'Failed to fetch orders');
+  }
 };

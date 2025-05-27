@@ -49,9 +49,9 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
-          image_url: string | null
+          image: string | null
           name: string
-          parent_id: string | null
+          // parent_id: string | null
           updated_at: string
         }
         Insert: {

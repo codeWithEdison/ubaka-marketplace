@@ -1,8 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Category } from '@/lib/utils';
+import { Category, DbCategory } from '@/lib/utils';
 
 export const fetchCategories = async () => {
-  // Fetch all categories ordered by name
   const { data, error } = await supabase
     .from('categories')
     .select('*, product_count:products(count)')
@@ -12,13 +11,14 @@ export const fetchCategories = async () => {
     throw new Error(error.message);
   }
 
-  // Format the response to match our Category type
   return (data || []).map(category => ({
     id: category.id,
     name: category.name,
-    description: category.description || '',
-    image: category.image || '',
+    description: category.description,
+    image: category.image,
     count: category.product_count?.[0]?.count || 0,
+    created_at: category.created_at,
+    updated_at: category.updated_at
   })) as Category[];
 };
 
@@ -27,41 +27,33 @@ export const fetchCategoryById = async (categoryId: string) => {
     .from('categories')
     .select('*, product_count:products(count)')
     .eq('id', categoryId)
-    .maybeSingle();
+    .single();
 
   if (error) {
     throw new Error(error.message);
   }
 
-  if (!data) {
-    throw new Error('Category not found');
-  }
-
-  // Format the response to match our Category type
   return {
     id: data.id,
     name: data.name,
-    description: data.description || '',
-    image: data.image_url || '',
+    description: data.description,
+    image: data.image,
     count: data.product_count?.[0]?.count || 0,
+    created_at: data.created_at,
+    updated_at: data.updated_at
   } as Category;
 };
 
-export const createCategory = async (categoryData: Partial<Category>) => {
-  // Check if user has admin permissions (you should implement this)
-  const isAdmin = await checkIfUserIsAdmin();
-  if (!isAdmin) {
-    throw new Error('Admin privileges required to create categories');
-  }
+export const createCategory = async (categoryData: Omit<Category, 'id'>) => {
+  const dbCategory: Omit<DbCategory, 'id'> = {
+    name: categoryData.name,
+    description: categoryData.description,
+    image: categoryData.image
+  };
 
   const { data, error } = await supabase
     .from('categories')
-    .insert({
-      name: categoryData.name,
-      description: categoryData.description,
-      image_url: categoryData.image,
-      parent_id: null // Removed parent property reference
-    })
+    .insert(dbCategory)
     .select()
     .single();
 
@@ -72,27 +64,24 @@ export const createCategory = async (categoryData: Partial<Category>) => {
   return {
     id: data.id,
     name: data.name,
-    description: data.description || '',
-    image: data.image_url || '',
-    count: 0, // New category has no products yet
+    description: data.description,
+    image: data.image,
+    count: 0,
+    created_at: data.created_at,
+    updated_at: data.updated_at
   } as Category;
 };
 
 export const updateCategory = async (categoryId: string, categoryData: Partial<Category>) => {
-  // Check if user has admin permissions
-  const isAdmin = await checkIfUserIsAdmin();
-  if (!isAdmin) {
-    throw new Error('Admin privileges required to update categories');
-  }
+  const dbCategory: Partial<DbCategory> = {
+    name: categoryData.name,
+    description: categoryData.description,
+    image: categoryData.image
+  };
 
   const { data, error } = await supabase
     .from('categories')
-    .update({
-      name: categoryData.name,
-      description: categoryData.description,
-      image: categoryData.image,
-      // parent_id: null
-    })
+    .update(dbCategory)
     .eq('id', categoryId)
     .select()
     .single();
@@ -104,19 +93,15 @@ export const updateCategory = async (categoryId: string, categoryData: Partial<C
   return {
     id: data.id,
     name: data.name,
-    description: data.description || '',
-    image: data.image_url || '',
-    count: 0, // We don't know the count here, would need another query
+    description: data.description,
+    image: data.image,
+    count: 0, // We'll need to fetch this separately if needed
+    created_at: data.created_at,
+    updated_at: data.updated_at
   } as Category;
 };
 
 export const deleteCategory = async (categoryId: string) => {
-  // Check if user has admin permissions
-  const isAdmin = await checkIfUserIsAdmin();
-  if (!isAdmin) {
-    throw new Error('Admin privileges required to delete categories');
-  }
-
   // Check if category has products
   const { count, error: countError } = await supabase
     .from('products')
@@ -131,21 +116,6 @@ export const deleteCategory = async (categoryId: string) => {
     throw new Error(`Cannot delete category with ${count} products. Please move or delete the products first.`);
   }
 
-  // Check if category has child categories
-  const { count: childCount, error: childCountError } = await supabase
-    .from('categories')
-    .select('*', { count: 'exact', head: true })
-    .eq('parent_id', categoryId);
-
-  if (childCountError) {
-    throw new Error(childCountError.message);
-  }
-
-  if (childCount && childCount > 0) {
-    throw new Error(`Cannot delete category with ${childCount} child categories. Please move or delete them first.`);
-  }
-
-  // Delete the category
   const { error } = await supabase
     .from('categories')
     .delete()

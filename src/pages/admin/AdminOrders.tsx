@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ShoppingBag, 
   Eye, 
@@ -49,81 +49,64 @@ import AdminSidebar from '@/components/AdminSidebar';
 import { useApiQuery } from '@/hooks/useApi';
 import { fetchAllOrders, updateOrderStatus } from '@/services/OrderService';
 import { toast } from 'sonner';
-import { OrderStatus, Order as DatabaseOrder, OrderItem as DatabaseOrderItem, Payment } from '@/types/database';
+import { Order } from '@/lib/utils';
+import { OrderStatus } from '@/types/database';
+import { format } from 'date-fns';
 
-interface OrderItem extends Omit<DatabaseOrderItem, 'order' | 'product'> {
-  products: {
-    id: string;
-    name: string;
-  };
-}
-
-interface Order {
-  id: string;
-  user_id: string;
-  total: number;
-  total_amount: number;
-  status: OrderStatus;
-  shipping_address: string;
-  tracking_number: string | null;
-  created_at: string;
-  updated_at: string;
-  order_items: {
-    id: string;
-    quantity: number;
-    price: number;
-    products: {
-      id: string;
-      name: string;
-    };
-  }[];
-  user: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-  payment: {
-    id: string;
-    payment_method: string;
-    status: string;
-  };
-}
+const statusColors: Record<OrderStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  processing: 'bg-blue-100 text-blue-800',
+  shipped: 'bg-purple-100 text-purple-800',
+  delivered: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+};
 
 const AdminOrders = () => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [trackingNumber, setTrackingNumber] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   
-  const { data: orders, isLoading, refetch } = useApiQuery<Order[]>(
-    ['admin-orders'],
-    () => fetchAllOrders()
-  );
-  
-  const filteredOrders = orders?.filter(order => {
-    const matchesSearch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      `${order.user.first_name} ${order.user.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  }) || [];
-  
-  const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
     try {
-      await updateOrderStatus(orderId, newStatus);
+      setLoading(true);
+      const data = await fetchAllOrders();
+      setOrders(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load orders');
+      toast.error('Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      const updatedOrder = await updateOrderStatus(
+        orderId,
+        newStatus,
+        newStatus === 'shipped' ? trackingNumber : undefined
+      );
+      setOrders(orders.map(order => 
+        order.id === orderId ? updatedOrder : order
+      ));
+      setTrackingNumber('');
       toast.success('Order status updated successfully');
-      refetch(); // Refresh the orders list
       
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
-    } catch (error) {
+    } catch (err) {
       toast.error('Failed to update order status');
-      console.error('Error updating order status:', error);
     }
   };
   
@@ -170,7 +153,7 @@ const AdminOrders = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <>
         <Navbar />
@@ -179,6 +162,22 @@ const AdminOrders = () => {
             <div className="flex items-center justify-center h-[50vh]">
               <Loader2 className="h-8 w-8 animate-spin mr-2" />
               <span>Loading orders...</span>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+  
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen pt-24 pb-16">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="flex items-center justify-center h-[50vh]">
+              <span className="text-destructive">Error: {error}</span>
             </div>
           </div>
         </main>
@@ -295,14 +294,14 @@ const AdminOrders = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders.length === 0 ? (
+                    {orders.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-4">
                           No orders found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredOrders.map((order) => (
+                      orders.map((order) => (
                         <TableRow key={order.id}>
                           <TableCell className="font-medium">{order.id}</TableCell>
                           <TableCell>
@@ -348,12 +347,25 @@ const AdminOrders = () => {
                                         
                                         <div>
                                           <h3 className="text-sm font-medium text-muted-foreground mb-1">Shipping Address</h3>
-                                          <p>{selectedOrder.shipping_address}</p>
+                                          {
+                                            typeof selectedOrder.shipping_address === 'object' && selectedOrder.shipping_address !== null ? (
+                                              <address className="not-italic">
+                                                {selectedOrder.shipping_address.fullName}<br/>
+                                                {selectedOrder.shipping_address.addressLine1}<br/>
+                                                {selectedOrder.shipping_address.addressLine2 && (<>{selectedOrder.shipping_address.addressLine2}<br/></>)}
+                                                {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} {selectedOrder.shipping_address.postalCode}<br/>
+                                                {selectedOrder.shipping_address.country}<br/>
+                                                Phone: {selectedOrder.shipping_address.phone}
+                                              </address>
+                                            ) : (
+                                              <p>{String(selectedOrder.shipping_address)}</p>
+                                            )
+                                          }
                                         </div>
                                         
                                         <div>
                                           <h3 className="text-sm font-medium text-muted-foreground mb-1">Payment Method</h3>
-                                          <p>{selectedOrder.payment.payment_method}</p>
+                                          <p>{selectedOrder.payment?.payment_method}</p>
                                         </div>
                                       </div>
                                       
@@ -370,7 +382,7 @@ const AdminOrders = () => {
                                               </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                              {selectedOrder.order_items.map((item) => (
+                                              {selectedOrder.order_items && selectedOrder.order_items.map((item) => (
                                                 <TableRow key={item.id}>
                                                   <TableCell>{item.products.name}</TableCell>
                                                   <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
@@ -393,7 +405,7 @@ const AdminOrders = () => {
                                           <Button 
                                             variant={selectedOrder.status === OrderStatus.PENDING ? 'default' : 'outline'} 
                                             size="sm"
-                                            onClick={() => handleUpdateStatus(selectedOrder.id, OrderStatus.PENDING)}
+                                            onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.PENDING)}
                                           >
                                             <Clock className="mr-2 h-4 w-4" />
                                             Pending
@@ -401,7 +413,7 @@ const AdminOrders = () => {
                                           <Button 
                                             variant={selectedOrder.status === OrderStatus.PROCESSING ? 'default' : 'outline'} 
                                             size="sm"
-                                            onClick={() => handleUpdateStatus(selectedOrder.id, OrderStatus.PROCESSING)}
+                                            onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.PROCESSING)}
                                           >
                                             <PackageOpen className="mr-2 h-4 w-4" />
                                             Processing
@@ -409,7 +421,7 @@ const AdminOrders = () => {
                                           <Button 
                                             variant={selectedOrder.status === OrderStatus.SHIPPED ? 'default' : 'outline'} 
                                             size="sm"
-                                            onClick={() => handleUpdateStatus(selectedOrder.id, OrderStatus.SHIPPED)}
+                                            onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.SHIPPED)}
                                           >
                                             <Truck className="mr-2 h-4 w-4" />
                                             Shipped
@@ -417,7 +429,7 @@ const AdminOrders = () => {
                                           <Button 
                                             variant={selectedOrder.status === OrderStatus.DELIVERED ? 'default' : 'outline'} 
                                             size="sm"
-                                            onClick={() => handleUpdateStatus(selectedOrder.id, OrderStatus.DELIVERED)}
+                                            onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.DELIVERED)}
                                           >
                                             <CheckCircle className="mr-2 h-4 w-4" />
                                             Delivered
@@ -425,7 +437,7 @@ const AdminOrders = () => {
                                           <Button 
                                             variant={selectedOrder.status === OrderStatus.CANCELLED ? 'destructive' : 'outline'} 
                                             size="sm"
-                                            onClick={() => handleUpdateStatus(selectedOrder.id, OrderStatus.CANCELLED)}
+                                            onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.CANCELLED)}
                                           >
                                             <XCircle className="mr-2 h-4 w-4" />
                                             Cancelled

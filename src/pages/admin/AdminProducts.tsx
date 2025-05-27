@@ -194,7 +194,7 @@ const AdminProducts = () => {
                           </TableCell>
                           <TableCell className="font-medium">{product.name}</TableCell>
                           <TableCell>{product.category.name}</TableCell>
-                          <TableCell>${product.price.toFixed(2)}</TableCell>
+                          <TableCell>RWF {product.price.toFixed(2)}</TableCell>
                           <TableCell>
                             {product.inStock ? (
                               <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
@@ -365,7 +365,7 @@ const ProductForm = ({ product, categories, onSubmit }: ProductFormProps) => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="price">Price ($)</Label>
+          <Label htmlFor="price">Price (RWF)</Label>
           <Input 
             id="price" 
             name="price" 

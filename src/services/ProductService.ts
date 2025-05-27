@@ -1,29 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/lib/utils';
-
-export interface DbProduct {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  category_id: string | null;
-  image_url: string | null;
-  discount: number | null;
-  featured: boolean | null;
-  in_stock: boolean | null;
-  is_new: boolean | null;
-  specifications: any | null;
-  created_at: string;
-  updated_at: string;
-  categories?: {
-    id: string;
-    name: string;
-  } | null;
-  ratings?: {
-    average_rating: number | null;
-    review_count: number | null;
-  }[] | null;
-}
+import { Product, DbProduct } from '@/lib/utils';
 
 export type ProductCategory = {
   id: string;
@@ -36,7 +12,7 @@ export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
     name: dbProduct.name,
     description: dbProduct.description || '',
     price: dbProduct.price,
-    image: dbProduct.image_url || '',
+    image: dbProduct.image || '',
     category: dbProduct.categories ? {
       id: dbProduct.categories.id,
       name: dbProduct.categories.name
@@ -47,7 +23,7 @@ export const mapDbProductToProduct = (dbProduct: DbProduct): Product => {
     rating: dbProduct.ratings && dbProduct.ratings[0] ?
       dbProduct.ratings[0].average_rating || 0 : 0,
     discount: dbProduct.discount || 0,
-    new: dbProduct.is_new || false,
+    new: dbProduct.new || false,
     featured: dbProduct.featured || false,
     inStock: dbProduct.in_stock !== null ? dbProduct.in_stock : true,
     specifications: dbProduct.specifications || {}
@@ -151,10 +127,24 @@ export const fetchProductById = async (productId: string): Promise<Product> => {
   return mapDbProductToProduct(data as DbProduct);
 };
 
-export const createProduct = async (productData: Omit<Product, 'id'>) => {
+export const createProduct = async (product: Omit<Product, 'id'>) => {
+  // Transform the product to match database schema
+  const dbProduct: Omit<DbProduct, 'id'> = {
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    image: product.image,
+    category_id: product.category.id,
+    discount: product.discount,
+    new: product.new,
+    featured: product.featured,
+    in_stock: product.inStock,
+    specifications: product.specifications,
+  };
+
   const { data, error } = await supabase
     .from('products')
-    .insert(productData)
+    .insert(dbProduct)
     .select()
     .single();
 
@@ -162,13 +152,27 @@ export const createProduct = async (productData: Omit<Product, 'id'>) => {
     throw new Error(error.message);
   }
 
-  return data;
+  return mapDbProductToProduct(data as DbProduct);
 };
 
 export const updateProduct = async (productId: string, productData: Partial<Product>) => {
+  // Transform the product data to match database schema
+  const dbProduct: Partial<DbProduct> = {
+    name: productData.name,
+    description: productData.description,
+    price: productData.price,
+    image: productData.image,
+    category_id: productData.category?.id,
+    discount: productData.discount,
+    new: productData.new,
+    featured: productData.featured,
+    in_stock: productData.inStock,
+    specifications: productData.specifications,
+  };
+
   const { data, error } = await supabase
     .from('products')
-    .update(productData)
+    .update(dbProduct)
     .eq('id', productId)
     .select()
     .single();
@@ -177,7 +181,7 @@ export const updateProduct = async (productId: string, productData: Partial<Prod
     throw new Error(error.message);
   }
 
-  return data;
+  return mapDbProductToProduct(data as DbProduct);
 };
 
 export const deleteProduct = async (productId: string) => {
