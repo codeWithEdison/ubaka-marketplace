@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Youtube } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -9,38 +8,29 @@ const Footer = () => {
   
   const footerLinks = {
     products: [
-      { name: 'Building Materials', href: '/categories/c1' },
-      { name: 'Structural Components', href: '/categories/c2' },
-      { name: 'Flooring', href: '/categories/c3' },
-      { name: 'Insulation', href: '/categories/c4' },
-      { name: 'Windows & Doors', href: '/categories/c5' },
+      { name: 'All Products', href: '/products' },
     ],
     services: [
-      { name: 'Delivery', href: '/services/delivery' },
-      { name: 'Installation', href: '/services/installation' },
-      { name: 'Consultation', href: '/services/consultation' },
-      { name: 'Project Management', href: '/services/project-management' },
-      { name: 'Material Estimation', href: '/services/material-estimation' },
+      { name: 'Our Services', href: '/services' },
     ],
     company: [
       { name: 'About Us', href: '/about' },
-      { name: 'Careers', href: '/careers' },
-      { name: 'Blog', href: '/blog' },
-      { name: 'Press', href: '/press' },
-      { name: 'Partners', href: '/partners' },
+      { name: 'Contact Us', href: '/contact' },
     ],
     legal: [
       { name: 'Terms of Service', href: '/terms' },
       { name: 'Privacy Policy', href: '/privacy' },
-      { name: 'Shipping Policy', href: '/shipping' },
-      { name: 'Return Policy', href: '/returns' },
-      { name: 'FAQ', href: '/faq' },
     ],
+    account: [
+      { name: 'My Account', href: '/account' },
+      { name: 'Cart', href: '/cart' },
+      { name: 'Checkout', href: '/checkout' },
+    ]
   };
   
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
-    // Subscription logic would go here
+    alert('Subscription feature is not yet implemented.');
   };
 
   return (
@@ -54,13 +44,13 @@ const Footer = () => {
             </Link>
             
             <p className="text-muted-foreground mb-6 max-w-xs">
-              Premium construction materials and supplies for professionals and DIY enthusiasts.
+              Premium construction materials and supplies.
             </p>
             
             <div className="space-y-3">
               <div className="flex items-center space-x-3 text-muted-foreground">
                 <Phone className="h-4 w-4" />
-                <span>+1 (555) 123-4567</span>
+                <span>0788240303</span>
               </div>
               
               <div className="flex items-center space-x-3 text-muted-foreground">
@@ -70,79 +60,81 @@ const Footer = () => {
               
               <div className="flex items-center space-x-3 text-muted-foreground">
                 <MapPin className="h-4 w-4 flex-shrink-0" />
-                <span>123 Construction Ave, Building City, BC 10101</span>
+                <span>Kigali, Rwanda</span>
               </div>
             </div>
           </div>
           
           {/* Quick Links */}
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Products</h3>
-              <ul className="space-y-2">
-                {footerLinks.products.map((link, index) => (
-                  <li key={index}>
-                    <Link 
-                      to={link.href}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Services</h3>
-              <ul className="space-y-2">
-                {footerLinks.services.map((link, index) => (
-                  <li key={index}>
-                    <Link 
-                      to={link.href}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div>
+            <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  to="/"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Home
+                </Link>
+              </li>
+              {footerLinks.products.map((link, index) => (
+                <li key={index}>
+                  <Link
+                    to={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+              {footerLinks.services.map((link, index) => (
+                <li key={index}>
+                  <Link
+                    to={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+              {footerLinks.company.map((link, index) => (
+                <li key={index}>
+                  <Link
+                    to={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+              {footerLinks.account.map((link, index) => (
+                <li key={index}>
+                  <Link
+                    to={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
           
-          {/* More Links */}
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Company</h3>
-              <ul className="space-y-2">
-                {footerLinks.company.map((link, index) => (
-                  <li key={index}>
-                    <Link 
-                      to={link.href}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Legal</h3>
-              <ul className="space-y-2">
-                {footerLinks.legal.map((link, index) => (
-                  <li key={index}>
-                    <Link 
-                      to={link.href}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Legal Links */}
+          <div>
+            <h3 className="font-semibold text-lg mb-4">Legal</h3>
+            <ul className="space-y-2">
+              {footerLinks.legal.map((link, index) => (
+                <li key={index}>
+                  <Link
+                    to={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
           
           {/* Newsletter */}
@@ -215,7 +207,7 @@ const Footer = () => {
                 Privacy
               </Link>
               <Link 
-                to="/cookies"
+                to="#"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cookies
