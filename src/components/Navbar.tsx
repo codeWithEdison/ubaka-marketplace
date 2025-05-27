@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Menu, X, User, LogIn, LogOut } from 'lucide-react';
+import { Search, ShoppingCart, Menu, X, User, LogIn, LogOut, Settings } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +23,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { items, getTotalItems } = useCart();
-  const { user, signOut, profile } = useAuth();
+  const { user, signOut, profile, isAdmin } = useAuth();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -139,6 +138,17 @@ const Navbar = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/account?tab=orders" className="w-full cursor-pointer">Orders</Link>
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="w-full cursor-pointer">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                     <LogOut className="h-4 w-4 mr-2" />
@@ -244,7 +254,7 @@ const Navbar = () => {
                   <span>Sign Out</span>
                 </button>
                 {/* Show Admin link if user has admin role */}
-                {profile?.role === 'admin' && (
+                {isAdmin && (
                   <Link 
                     to="/admin" 
                     className="px-2 py-1.5 rounded-md transition-colors text-ubaka-700 dark:text-white/80 hover:bg-secondary"

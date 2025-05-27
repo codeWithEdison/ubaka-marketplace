@@ -17,7 +17,7 @@ export const fetchCategories = async () => {
     id: category.id,
     name: category.name,
     description: category.description || '',
-    image: category.image_url || '',
+    image: category.image || '',
     count: category.product_count?.[0]?.count || 0,
   })) as Category[];
 };

@@ -59,6 +59,9 @@ export interface Category {
   description: string;
   image: string;
   count: number;
+  created_at?: string;
+  updated_at?: string;
+  product_count?: Array<{ count: number }>;
 }
 
 

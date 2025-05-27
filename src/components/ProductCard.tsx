@@ -21,7 +21,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const formatPrice = (price: number, discount?: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'RWF',
     }).format(price - (price * ((discount || 0) / 100)));
   };
 

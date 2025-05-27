@@ -74,7 +74,14 @@ const AdminProducts = () => {
   
   const handleEditProduct = async (updatedProduct: Product) => {
     try {
-      await updateProduct(updatedProduct.id, updatedProduct);
+      // Extract category_id from the category object
+      const { category, ...productData } = updatedProduct;
+      const productToUpdate = {
+        ...productData,
+        category_id: category.id
+      };
+
+      await updateProduct(updatedProduct.id, productToUpdate);
       await loadData();
       setIsEditDialogOpen(false);
       toast({

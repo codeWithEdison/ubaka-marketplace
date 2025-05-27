@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { fetchCategories } from '@/services/CategoryService';
-import { Category } from '@/lib/utils';
+import { Category, getFallbackImageUrl } from '@/lib/utils';
 
 const CategoryGrid = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -14,8 +14,10 @@ const CategoryGrid = () => {
     const loadCategories = async () => {
       try {
         const data = await fetchCategories();
+        console.log('Raw API response:', data);
         setCategories(data);
       } catch (err) {
+        console.error('Error loading categories:', err);
         setError(err instanceof Error ? err.message : 'Failed to load categories');
       } finally {
         setIsLoading(false);
@@ -24,6 +26,10 @@ const CategoryGrid = () => {
 
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    console.log('Categories state after update:', categories);
+  }, [categories]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -109,7 +115,7 @@ const CategoryGrid = () => {
               <div className="absolute inset-0 bg-ubaka-900/40 group-hover:bg-ubaka-900/30 transition-all duration-300 z-10" />
               
               <img 
-                src={category.image} 
+                src={category.image || getFallbackImageUrl()} 
                 alt={category.name}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
@@ -117,10 +123,12 @@ const CategoryGrid = () => {
               {/* Content */}
               <div className="absolute inset-0 p-6 flex flex-col justify-end z-20">
                 <h3 className="text-xl font-semibold text-white mb-1">{category.name}</h3>
-                <p className="text-white/80 text-sm mb-4 line-clamp-2">{category.description}</p>
+                <p className="text-white/80 text-sm mb-4 line-clamp-2">{category.description || 'No description available'}</p>
                 
                 <div className="flex items-center text-sm text-white space-x-2 transition-all transform group-hover:translate-x-2">
-                  <span>{category.count} Products</span>
+                  <span>
+                    {category.count || (category.product_count?.[0]?.count || 0)} Products
+                  </span>
                   <ArrowRight className="h-4 w-4" />
                 </div>
               </div>
