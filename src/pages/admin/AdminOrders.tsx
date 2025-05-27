@@ -145,7 +145,7 @@ const AdminOrders = () => {
   };
   
   const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`;
+    return `RWF ${amount.toLocaleString()}`;
   };
   
   const formatDate = (dateString: string) => {
@@ -350,12 +350,12 @@ const AdminOrders = () => {
                                           {
                                             typeof selectedOrder.shipping_address === 'object' && selectedOrder.shipping_address !== null ? (
                                               <address className="not-italic">
-                                                {selectedOrder.shipping_address.fullName}<br/>
-                                                {selectedOrder.shipping_address.addressLine1}<br/>
-                                                {selectedOrder.shipping_address.addressLine2 && (<>{selectedOrder.shipping_address.addressLine2}<br/></>)}
-                                                {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} {selectedOrder.shipping_address.postalCode}<br/>
-                                                {selectedOrder.shipping_address.country}<br/>
-                                                Phone: {selectedOrder.shipping_address.phone}
+                                                {(selectedOrder.shipping_address as any).fullName}<br/>
+                                                {(selectedOrder.shipping_address as any).addressLine1}<br/>
+                                                {(selectedOrder.shipping_address as any).addressLine2 && (<>{(selectedOrder.shipping_address as any).addressLine2}<br/></>)}
+                                                {(selectedOrder.shipping_address as any).city}, {(selectedOrder.shipping_address as any).state} {(selectedOrder.shipping_address as any).postalCode}<br/>
+                                                {(selectedOrder.shipping_address as any).country}<br/>
+                                                Phone: {(selectedOrder.shipping_address as any).phone}
                                               </address>
                                             ) : (
                                               <p>{String(selectedOrder.shipping_address)}</p>

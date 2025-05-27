@@ -53,7 +53,8 @@ export const fetchOrders = async () => {
 
 // Fetch a specific order by ID
 export const fetchOrderById = async (orderId: string): Promise<Order> => {
-  const { data, error } = await supabase
+  // First fetch the order
+  const { data: orderData, error: orderError } = await supabase
     .from('orders')
     .select(`
       *,
@@ -65,27 +66,41 @@ export const fetchOrderById = async (orderId: string): Promise<Order> => {
           id,
           name
         )
-      ),
-      user:user_id (
-        id,
-        first_name,
-        last_name,
-        email
-      ),
-      payment:payment_intent_id (
-        id,
-        payment_method,
-        status
       )
     `)
     .eq('id', orderId)
     .single();
 
-  if (error) {
-    throw new Error(error.message);
+  if (orderError) {
+    throw new Error(orderError.message);
   }
 
-  return data as Order;
+  // Get user data from shipping address since we can't access auth.users directly
+  const shippingAddress = orderData.shipping_address as {
+    fullName: string;
+    email?: string;
+    phone: string;
+    addressLine1: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+  };
+
+  // Split fullName into first and last name
+  const nameParts = shippingAddress.fullName.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
+  return {
+    ...orderData,
+    user: {
+      id: orderData.user_id,
+      email: shippingAddress.email || '',
+      first_name: firstName,
+      last_name: lastName
+    }
+  } as Order;
 };
 
 // Create a new order from cart items and return the created order
@@ -375,16 +390,16 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
         tracking_number,
         created_at,
         updated_at,
-        order_items (
+      order_items (
+        id,
+        quantity,
+        price,
+        products (
           id,
-          quantity,
-          price,
-          products (
-            id,
-            name
-          )
+          name
         )
-      `)
+      )
+    `)
       .order('created_at', { ascending: false });
 
     if (error) {
