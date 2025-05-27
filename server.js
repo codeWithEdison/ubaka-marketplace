@@ -6,8 +6,24 @@ import OpenAI from 'openai';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// Configure CORS
+app.use(cors({
+  origin: ['https://ubaka.codewithedison.com', 'http://localhost:8080'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Handle preflight requests
+app.options('*', cors());
+
 app.use(express.json());
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 
 const openai = new OpenAI({
   baseURL: 'https://api.deepseek.com',
