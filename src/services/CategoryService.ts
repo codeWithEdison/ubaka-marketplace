@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/lib/utils';
 
@@ -8,11 +7,11 @@ export const fetchCategories = async () => {
     .from('categories')
     .select('*, product_count:products(count)')
     .order('name');
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   // Format the response to match our Category type
   return (data || []).map(category => ({
     id: category.id,
@@ -29,15 +28,15 @@ export const fetchCategoryById = async (categoryId: string) => {
     .select('*, product_count:products(count)')
     .eq('id', categoryId)
     .maybeSingle();
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   if (!data) {
     throw new Error('Category not found');
   }
-  
+
   // Format the response to match our Category type
   return {
     id: data.id,
@@ -54,7 +53,7 @@ export const createCategory = async (categoryData: Partial<Category>) => {
   if (!isAdmin) {
     throw new Error('Admin privileges required to create categories');
   }
-  
+
   const { data, error } = await supabase
     .from('categories')
     .insert({
@@ -65,11 +64,11 @@ export const createCategory = async (categoryData: Partial<Category>) => {
     })
     .select()
     .single();
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   return {
     id: data.id,
     name: data.name,
@@ -85,23 +84,23 @@ export const updateCategory = async (categoryId: string, categoryData: Partial<C
   if (!isAdmin) {
     throw new Error('Admin privileges required to update categories');
   }
-  
+
   const { data, error } = await supabase
     .from('categories')
     .update({
       name: categoryData.name,
       description: categoryData.description,
-      image_url: categoryData.image,
-      parent_id: null // Removed parent property reference
+      image: categoryData.image,
+      // parent_id: null
     })
     .eq('id', categoryId)
     .select()
     .single();
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   return {
     id: data.id,
     name: data.name,
@@ -117,45 +116,45 @@ export const deleteCategory = async (categoryId: string) => {
   if (!isAdmin) {
     throw new Error('Admin privileges required to delete categories');
   }
-  
+
   // Check if category has products
   const { count, error: countError } = await supabase
     .from('products')
     .select('*', { count: 'exact', head: true })
     .eq('category_id', categoryId);
-  
+
   if (countError) {
     throw new Error(countError.message);
   }
-  
+
   if (count && count > 0) {
     throw new Error(`Cannot delete category with ${count} products. Please move or delete the products first.`);
   }
-  
+
   // Check if category has child categories
   const { count: childCount, error: childCountError } = await supabase
     .from('categories')
     .select('*', { count: 'exact', head: true })
     .eq('parent_id', categoryId);
-  
+
   if (childCountError) {
     throw new Error(childCountError.message);
   }
-  
+
   if (childCount && childCount > 0) {
     throw new Error(`Cannot delete category with ${childCount} child categories. Please move or delete them first.`);
   }
-  
+
   // Delete the category
   const { error } = await supabase
     .from('categories')
     .delete()
     .eq('id', categoryId);
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   return true;
 };
 
@@ -165,13 +164,13 @@ async function checkIfUserIsAdmin(): Promise<boolean> {
   if (!user) {
     return false;
   }
-  
+
   const { data } = await supabase
     .from('user_roles')
     .select()
     .eq('user_id', user.id)
     .eq('role', 'admin')
     .maybeSingle();
-  
+
   return !!data;
 }

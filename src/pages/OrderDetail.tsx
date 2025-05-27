@@ -13,7 +13,6 @@ import { canReturnOrder, getReturnRequestsForOrder, ReturnRequest } from '@/lib/
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { fetchOrderById } from '@/services/OrderService';
 import { OrderStatus } from '@/components/account/statusUtils';
-import { Json } from '@/integrations/supabase/types';
 
 interface OrderItem {
   id: string;
@@ -30,13 +29,23 @@ interface Order {
   user_id: string;
   status: OrderStatus;
   total: number;
-  shipping_address: Json;
-  tracking_number?: string;
-  estimated_delivery?: string;
+  shipping_address: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phone: string;
+  };
+  tracking_number?: string | null;
+  estimated_delivery?: string | null;
   created_at: string;
-  notes: string;
-  payment_intent_id: string;
-  payment_method: string;
+  updated_at: string;
+  notes?: string | null;
+  payment_intent_id?: string | null;
+  payment_method?: string | null;
   order_items: OrderItem[];
 }
 
@@ -52,8 +61,8 @@ const mapOrderToTrackerOrder = (order: Order): OrderTrackerOrder => {
       quantity: item.quantity
     })),
     total: order.total,
-    trackingNumber: order.tracking_number,
-    estimatedDelivery: order.estimated_delivery
+    trackingNumber: order.tracking_number || undefined,
+    estimatedDelivery: order.estimated_delivery || undefined
   };
 };
 
@@ -221,9 +230,12 @@ const OrderDetail = () => {
               <div>
                 <h3 className="font-medium text-sm mb-2">Shipping Address</h3>
                 <p className="text-sm text-muted-foreground">
-                  {typeof order.shipping_address === 'string' 
-                    ? order.shipping_address 
-                    : JSON.stringify(order.shipping_address)}
+                  {typeof order.shipping_address === 'object' && order.shipping_address !== null
+                    ? `${order.shipping_address.fullName}, ${order.shipping_address.addressLine1}, ${order.shipping_address.city}, ${order.shipping_address.state}, ${order.shipping_address.postalCode}, ${order.shipping_address.country}`
+                    : typeof order.shipping_address === 'string'
+                    ? order.shipping_address
+                    : 'N/A'
+                  }
                 </p>
               </div>
               <div>

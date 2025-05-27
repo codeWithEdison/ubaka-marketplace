@@ -56,6 +56,27 @@ export interface OrderDetails {
   };
 }
 
+export interface PaymentDetails {
+  amount: number;
+  currency: string;
+  email: string;
+  phone_number?: string;
+  name: string;
+  tx_ref: string;
+  payment_type: 'card' | 'mobilemoney';
+  payment_options?: string;
+}
+
+export interface FlutterwaveResponse {
+  status: string;
+  message: string;
+  data: {
+    link: string;
+    status: string;
+    transaction_id?: string;
+  };
+}
+
 class PaymentService {
   private apiBaseUrl: string = '/api/payments'; // Replace with your API URL in production
 
@@ -72,27 +93,27 @@ class PaymentService {
     try {
       // In a real app, you would make an API call to your payment processor
       // For demo purposes, we'll simulate the API call
-      
+
       // Validate card information
       if (!this.validateCardNumber(cardData.cardNumber)) {
         throw new Error('Invalid card number');
       }
-      
+
       if (!this.validateCardExpiry(cardData.cardExpiry)) {
         throw new Error('Invalid expiry date');
       }
-      
+
       if (!this.validateCardCVC(cardData.cardCvc)) {
         throw new Error('Invalid CVC');
       }
-      
+
       // Simulate API call
       await this.simulateApiCall();
-      
+
       // Generate a reference number and transaction ID
       const orderReference = this.generateOrderReference();
       const transactionId = this.generateTransactionId();
-      
+
       // Return successful transaction
       return {
         success: true,
@@ -118,18 +139,18 @@ class PaymentService {
   public async sendMobileMoneyVerification(
     mobileData: MobileMoneyData,
     orderDetails: OrderDetails
-  ): Promise<{success: boolean; error?: string}> {
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       // Validate mobile number format
       if (!this.validateMobileNumber(mobileData.momoNumber)) {
         throw new Error('Invalid mobile number format');
       }
-      
+
       // Simulate API call to send verification code
       await this.simulateApiCall();
-      
+
       // In a real app, your backend would send the actual verification code via SMS
-      
+
       return { success: true };
     } catch (error) {
       console.error('Mobile money verification error:', error);
@@ -156,14 +177,14 @@ class PaymentService {
       if (!verificationCode || verificationCode.length < 4) {
         throw new Error('Invalid verification code');
       }
-      
+
       // Simulate API call to verify the code
       await this.simulateApiCall();
-      
+
       // Generate a reference number and transaction ID
       const orderReference = this.generateOrderReference();
       const transactionId = this.generateTransactionId();
-      
+
       // Return successful transaction
       return {
         success: true,
@@ -191,17 +212,17 @@ class PaymentService {
     amountInWei: string;
   } {
     const totalAmount = orderDetails.totalAmount + orderDetails.shipping;
-    
+
     // Convert to ETH (this is a simplified conversion)
     // In production, use an actual exchange rate API
     const ethAmount = totalAmount / 3500000;
-    
+
     // Convert ETH to Wei (1 ETH = 10^18 Wei)
     const weiAmount = BigInt(Math.round(ethAmount * 1e18)).toString(16);
-    
+
     // This should be your company's ethereum wallet address
     const receiverAddress = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
-    
+
     return {
       receiverAddress,
       amountInEth: parseFloat(ethAmount.toFixed(6)),
@@ -223,30 +244,30 @@ class PaymentService {
       if (!window.ethereum) {
         throw new Error('MetaMask is not installed');
       }
-      
+
       if (!walletAddress) {
         throw new Error('Wallet is not connected');
       }
-      
+
       // Prepare payment data
       const paymentData = this.prepareCryptoPayment(orderDetails);
-      
+
       // Prepare transaction parameters
       const transactionParameters = {
         to: paymentData.receiverAddress,
         from: walletAddress,
         value: paymentData.amountInWei,
       };
-      
+
       // Send the transaction via MetaMask
       const txHash = await window.ethereum.request({
         method: 'eth_sendTransaction',
         params: [transactionParameters],
       });
-      
+
       // Generate order reference
       const orderReference = this.generateOrderReference();
-      
+
       return {
         success: true,
         orderReference,
@@ -276,18 +297,18 @@ class PaymentService {
       if (!window.ethereum) {
         throw new Error('MetaMask is not installed');
       }
-      
+
       // Request account access
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      
+
       // Get the current network
       const chainId = await window.ethereum.request({ method: 'eth_chainId' });
       const network = this.getNetworkName(chainId);
-      
+
       if (accounts.length === 0) {
         throw new Error('No accounts found');
       }
-      
+
       return {
         success: true,
         address: accounts[0],
@@ -301,7 +322,7 @@ class PaymentService {
       };
     }
   }
-  
+
   /**
    * Get current connected MetaMask accounts
    * @returns Connected accounts or null
@@ -315,16 +336,16 @@ class PaymentService {
       if (!window.ethereum) {
         return { isConnected: false };
       }
-      
+
       const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-      
+
       if (accounts.length === 0) {
         return { isConnected: false };
       }
-      
+
       const chainId = await window.ethereum.request({ method: 'eth_chainId' });
       const network = this.getNetworkName(chainId);
-      
+
       return {
         address: accounts[0],
         network,
@@ -335,7 +356,7 @@ class PaymentService {
       return { isConnected: false };
     }
   }
-  
+
   /**
    * Register MetaMask event listeners
    * @param onAccountsChanged Callback when accounts change
@@ -346,11 +367,11 @@ class PaymentService {
     onAccountsChanged: (accounts: string[]) => void,
     onChainChanged: (chainId: string) => void
   ): () => void {
-    if (!window.ethereum) return () => {};
-    
+    if (!window.ethereum) return () => { };
+
     window.ethereum.on('accountsChanged', onAccountsChanged);
     window.ethereum.on('chainChanged', onChainChanged);
-    
+
     // Return cleanup function
     return () => {
       if (window.ethereum && window.ethereum.removeListener) {
@@ -381,26 +402,26 @@ class PaymentService {
     if (!/^\d{2}\/\d{2}$/.test(expiry)) {
       return false;
     }
-    
+
     const [month, year] = expiry.split('/');
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear() % 100;
     const currentMonth = currentDate.getMonth() + 1;
-    
+
     const expiryMonth = parseInt(month, 10);
     const expiryYear = parseInt(year, 10);
-    
+
     // Check if month is valid
     if (expiryMonth < 1 || expiryMonth > 12) {
       return false;
     }
-    
+
     // Check if date is in the past
-    if (expiryYear < currentYear || 
-       (expiryYear === currentYear && expiryMonth < currentMonth)) {
+    if (expiryYear < currentYear ||
+      (expiryYear === currentYear && expiryMonth < currentMonth)) {
       return false;
     }
-    
+
     return true;
   }
 
@@ -439,7 +460,7 @@ class PaymentService {
    * @returns Unique transaction ID
    */
   private generateTransactionId(): string {
-    return 'TR-' + Math.random().toString(36).substring(2, 15) + 
+    return 'TR-' + Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
   }
 
@@ -458,7 +479,7 @@ class PaymentService {
       '0x89': 'Polygon Mainnet',
       '0x13881': 'Polygon Mumbai Testnet'
     };
-    
+
     return networks[chainId] || `Chain ID: ${chainId}`;
   }
 
@@ -486,3 +507,101 @@ declare global {
 // Create and export a singleton instance
 const paymentService = new PaymentService();
 export default paymentService;
+
+export const initiatePayment = async (paymentDetails: PaymentDetails): Promise<FlutterwaveResponse> => {
+  try {
+    // Load Flutterwave script dynamically
+    const script = document.createElement('script');
+    script.src = 'https://checkout.flutterwave.com/v3.js';
+    document.body.appendChild(script);
+
+    return new Promise((resolve, reject) => {
+      script.onload = () => {
+        // Get the global Flutterwave object
+        const FlutterwaveCheckout = (window as any).FlutterwaveCheckout;
+
+        if (!FlutterwaveCheckout) {
+          reject(new Error('Flutterwave failed to load'));
+          return;
+        }
+
+        FlutterwaveCheckout({
+          public_key: import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY,
+          tx_ref: paymentDetails.tx_ref,
+          amount: paymentDetails.amount,
+          currency: paymentDetails.currency,
+          payment_options: paymentDetails.payment_type === 'card' ? 'card' : 'mobilemoney',
+          redirect_url: `${window.location.origin}/payment-callback`,
+          customer: {
+            email: paymentDetails.email,
+            phone_number: paymentDetails.phone_number,
+            name: paymentDetails.name,
+          },
+          customizations: {
+            title: 'Ubaka Marketplace',
+            description: 'Payment for your purchase',
+            logo: '/logo.png', 
+          },
+          onClose: () => {
+            reject(new Error('Payment cancelled by user'));
+          },
+          callback: (response: any) => {
+            if (response.status === 'successful') {
+              resolve({
+                status: 'success',
+                message: 'Payment successful',
+                data: {
+                  link: response.data.link,
+                  status: response.status,
+                  transaction_id: response.transaction_id
+                }
+              });
+            } else {
+              reject(new Error(response.message || 'Payment failed'));
+            }
+          },
+          callbackContext: this
+        });
+      };
+      script.onerror = () => reject(new Error('Failed to load Flutterwave script'));
+    });
+  } catch (error) {
+    console.error('Payment initiation failed:', error);
+    throw error;
+  }
+};
+
+export const verifyPayment = async (transactionId: string): Promise<FlutterwaveResponse> => {
+  try {
+    const response = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_FLUTTERWAVE_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Payment verification failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      return {
+        status: 'success',
+        message: 'Payment verified successfully',
+        data: {
+          link: '',
+          status: 'success',
+          transaction_id: transactionId
+        }
+      };
+    } else {
+      throw new Error(data.message || 'Payment verification failed');
+    }
+  } catch (error) {
+    console.error('Payment verification failed:', error);
+    throw error;
+  }
+};

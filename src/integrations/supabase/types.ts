@@ -562,6 +562,96 @@ export type Database = {
         }
         Relationships: []
       }
+      suppliers: {
+        Row: {
+          id: string
+          name: string
+          reliability: number
+          lead_time: number
+          on_time_delivery: number
+          status: 'active' | 'warning' | 'critical'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          reliability: number
+          lead_time: number
+          on_time_delivery: number
+          status: 'active' | 'warning' | 'critical'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          reliability?: number
+          lead_time?: number
+          on_time_delivery?: number
+          status?: 'active' | 'warning' | 'critical'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      shipments: {
+        Row: {
+          id: string
+          supplier_id: string
+          items_count: number
+          status: 'delivered' | 'in-transit' | 'pending' | 'delayed'
+          expected_date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          supplier_id: string
+          items_count: number
+          status: 'delivered' | 'in-transit' | 'pending' | 'delayed'
+          expected_date: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          supplier_id?: string
+          items_count?: number
+          status?: 'delivered' | 'in-transit' | 'pending' | 'delayed'
+          expected_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      inventory: {
+        Row: {
+          id: string
+          name: string
+          stock: number
+          threshold: number
+          supplier_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          stock: number
+          threshold: number
+          supplier_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          stock?: number
+          threshold?: number
+          supplier_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       product_ratings: {
