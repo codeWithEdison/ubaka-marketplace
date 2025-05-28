@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  ShoppingBag, 
-  Eye, 
-  Download, 
+import {
+  ShoppingBag,
+  Eye,
+  Download,
   Search,
   CheckCircle,
   Clock,
@@ -13,22 +13,22 @@ import {
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
 } from "@/components/ui/dialog";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -36,18 +36,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AdminSidebar from '@/components/AdminSidebar';
 import { useApiQuery } from '@/hooks/useApi';
-import { fetchAllOrders, updateOrderStatus } from '@/services/OrderService';
+import { fetchAllOrders, updateOrderStatus, fetchOrderById } from '@/services/OrderService';
 import { toast } from 'sonner';
 import { Order } from '@/lib/utils';
 import { OrderStatus } from '@/types/database';
@@ -67,10 +67,11 @@ const AdminOrders = () => {
   const [error, setError] = useState<string | null>(null);
   const [trackingNumber, setTrackingNumber] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  
+  const [isOrderDetailsLoading, setIsOrderDetailsLoading] = useState(false);
+
   useEffect(() => {
     loadOrders();
   }, []);
@@ -88,7 +89,7 @@ const AdminOrders = () => {
       setLoading(false);
     }
   };
-  
+
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     try {
       const updatedOrder = await updateOrderStatus(
@@ -96,12 +97,12 @@ const AdminOrders = () => {
         newStatus,
         newStatus === 'shipped' ? trackingNumber : undefined
       );
-      setOrders(orders.map(order => 
+      setOrders(orders.map(order =>
         order.id === orderId ? updatedOrder : order
       ));
       setTrackingNumber('');
       toast.success('Order status updated successfully');
-      
+
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
@@ -109,7 +110,7 @@ const AdminOrders = () => {
       toast.error('Failed to update order status');
     }
   };
-  
+
   const getStatusIcon = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING:
@@ -126,7 +127,7 @@ const AdminOrders = () => {
         return null;
     }
   };
-  
+
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING:
@@ -143,11 +144,11 @@ const AdminOrders = () => {
         return null;
     }
   };
-  
+
   const formatCurrency = (amount: number) => {
     return `RWF ${amount.toLocaleString()}`;
   };
-  
+
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
@@ -169,7 +170,7 @@ const AdminOrders = () => {
       </>
     );
   }
-  
+
   if (error) {
     return (
       <>
@@ -185,21 +186,21 @@ const AdminOrders = () => {
       </>
     );
   }
-  
+
   return (
     <>
       <Navbar />
-      
+
       <main className="min-h-screen pt-24 pb-16">
         <div className="container mx-auto px-4 md:px-6">
           <h1 className="text-3xl md:text-4xl font-bold mb-8">Order Management</h1>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {/* Sidebar */}
             <div className="md:col-span-1">
               <AdminSidebar />
             </div>
-            
+
             {/* Main Content */}
             <div className="md:col-span-2 lg:col-span-3 space-y-6">
               {/* Stats Cards */}
@@ -215,7 +216,7 @@ const AdminOrders = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-2">
@@ -227,7 +228,7 @@ const AdminOrders = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-2">
@@ -239,7 +240,7 @@ const AdminOrders = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-2">
@@ -252,7 +253,7 @@ const AdminOrders = () => {
                   </CardContent>
                 </Card>
               </div>
-              
+
               {/* Filters */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative w-full sm:max-w-xs">
@@ -264,7 +265,7 @@ const AdminOrders = () => {
                     className="pl-8"
                   />
                 </div>
-                
+
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Filter by status" />
@@ -279,7 +280,7 @@ const AdminOrders = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {/* Orders Table */}
               <div className="border rounded-lg overflow-hidden">
                 <Table>
@@ -306,18 +307,33 @@ const AdminOrders = () => {
                           <TableCell className="font-medium">{order.id}</TableCell>
                           <TableCell>
                             <div>
-                              <div>{`${order.user.first_name} ${order.user.last_name}`}</div>
-                              <div className="text-sm text-muted-foreground">{order.user.email}</div>
+                              <div>{`${order.user?.first_name || ''} ${order.user?.last_name || ''}`}</div>
+                              <div className="text-sm text-muted-foreground">{order.user?.email || ''}</div>
                             </div>
                           </TableCell>
                           <TableCell>{formatDate(order.created_at)}</TableCell>
                           <TableCell>{getStatusBadge(order.status)}</TableCell>
-                          <TableCell>{formatCurrency(order.total_amount)}</TableCell>
+                          <TableCell>{order.total_amount !== undefined ? formatCurrency(order.total_amount) : 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
-                              <Dialog open={isViewDialogOpen && selectedOrder?.id === order.id} onOpenChange={(open) => {
+                              <Dialog open={isViewDialogOpen && selectedOrder?.id === order.id} onOpenChange={async (open) => {
                                 setIsViewDialogOpen(open);
-                                if (open) setSelectedOrder(order);
+                                if (open) {
+                                  setSelectedOrder(null);
+                                  setIsOrderDetailsLoading(true);
+                                  try {
+                                    const orderDetails = await fetchOrderById(order.id);
+                                    setSelectedOrder(orderDetails);
+                                  } catch (error) {
+                                    console.error('Failed to fetch order details:', error);
+                                    toast.error('Failed to load order details');
+                                    setSelectedOrder(order);
+                                  } finally {
+                                    setIsOrderDetailsLoading(false);
+                                  }
+                                } else {
+                                  setSelectedOrder(null);
+                                }
                               }}>
                                 <DialogTrigger asChild>
                                   <Button variant="outline" size="sm">
@@ -327,10 +343,15 @@ const AdminOrders = () => {
                                 </DialogTrigger>
                                 <DialogContent className="max-w-3xl">
                                   <DialogHeader>
-                                    <DialogTitle>Order Details - {order.id}</DialogTitle>
+                                    <DialogTitle>Order Details - {selectedOrder?.id || 'Loading...'}</DialogTitle>
                                   </DialogHeader>
-                                  
-                                  {selectedOrder && (
+
+                                  {isOrderDetailsLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                      <Loader2 className="h-8 w-8 animate-spin mr-2" />
+                                      <span>Loading order details...</span>
+                                    </div>
+                                  ) : selectedOrder ? (
                                     <div className="space-y-6">
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
@@ -338,23 +359,23 @@ const AdminOrders = () => {
                                           <p className="font-medium">{`${selectedOrder.user.first_name} ${selectedOrder.user.last_name}`}</p>
                                           <p>{selectedOrder.user.email}</p>
                                         </div>
-                                        
+
                                         <div>
                                           <h3 className="text-sm font-medium text-muted-foreground mb-1">Order Info</h3>
                                           <p><span className="font-medium">Date:</span> {formatDate(selectedOrder.created_at)}</p>
                                           <p><span className="font-medium">Status:</span> {getStatusBadge(selectedOrder.status)}</p>
                                         </div>
-                                        
+
                                         <div>
                                           <h3 className="text-sm font-medium text-muted-foreground mb-1">Shipping Address</h3>
                                           {
                                             typeof selectedOrder.shipping_address === 'object' && selectedOrder.shipping_address !== null ? (
                                               <address className="not-italic">
-                                                {(selectedOrder.shipping_address as any).fullName}<br/>
-                                                {(selectedOrder.shipping_address as any).addressLine1}<br/>
-                                                {(selectedOrder.shipping_address as any).addressLine2 && (<>{(selectedOrder.shipping_address as any).addressLine2}<br/></>)}
-                                                {(selectedOrder.shipping_address as any).city}, {(selectedOrder.shipping_address as any).state} {(selectedOrder.shipping_address as any).postalCode}<br/>
-                                                {(selectedOrder.shipping_address as any).country}<br/>
+                                                {(selectedOrder.shipping_address as any).fullName}<br />
+                                                {(selectedOrder.shipping_address as any).addressLine1}<br />
+                                                {(selectedOrder.shipping_address as any).addressLine2 && (<>{(selectedOrder.shipping_address as any).addressLine2}<br /></>)}
+                                                {(selectedOrder.shipping_address as any).city}, {(selectedOrder.shipping_address as any).state} {(selectedOrder.shipping_address as any).postalCode}<br />
+                                                {(selectedOrder.shipping_address as any).country}<br />
                                                 Phone: {(selectedOrder.shipping_address as any).phone}
                                               </address>
                                             ) : (
@@ -362,13 +383,13 @@ const AdminOrders = () => {
                                             )
                                           }
                                         </div>
-                                        
+
                                         <div>
                                           <h3 className="text-sm font-medium text-muted-foreground mb-1">Payment Method</h3>
                                           <p>{selectedOrder.payment?.payment_method}</p>
                                         </div>
                                       </div>
-                                      
+
                                       <div>
                                         <h3 className="text-sm font-medium text-muted-foreground mb-2">Order Items</h3>
                                         <div className="border rounded-md overflow-hidden">
@@ -385,57 +406,57 @@ const AdminOrders = () => {
                                               {selectedOrder.order_items && selectedOrder.order_items.map((item) => (
                                                 <TableRow key={item.id}>
                                                   <TableCell>{item.products.name}</TableCell>
-                                                  <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                                                  <TableCell className="text-right">{formatCurrency(item.price ?? 0)}</TableCell>
                                                   <TableCell className="text-right">{item.quantity}</TableCell>
-                                                  <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
+                                                  <TableCell className="text-right">{formatCurrency((item.price ?? 0) * item.quantity)}</TableCell>
                                                 </TableRow>
                                               ))}
                                               <TableRow>
                                                 <TableCell colSpan={3} className="text-right font-medium">Total</TableCell>
-                                                <TableCell className="text-right font-medium">{formatCurrency(selectedOrder.total_amount)}</TableCell>
+                                                <TableCell className="text-right font-medium">{selectedOrder?.total_amount !== undefined ? formatCurrency(selectedOrder.total_amount) : 'N/A'}</TableCell>
                                               </TableRow>
                                             </TableBody>
                                           </Table>
                                         </div>
                                       </div>
-                                      
+
                                       <div>
                                         <h3 className="text-sm font-medium text-muted-foreground mb-2">Update Status</h3>
                                         <div className="flex flex-wrap gap-2">
-                                          <Button 
-                                            variant={selectedOrder.status === OrderStatus.PENDING ? 'default' : 'outline'} 
+                                          <Button
+                                            variant={selectedOrder.status === OrderStatus.PENDING ? 'default' : 'outline'}
                                             size="sm"
                                             onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.PENDING)}
                                           >
                                             <Clock className="mr-2 h-4 w-4" />
                                             Pending
                                           </Button>
-                                          <Button 
-                                            variant={selectedOrder.status === OrderStatus.PROCESSING ? 'default' : 'outline'} 
+                                          <Button
+                                            variant={selectedOrder.status === OrderStatus.PROCESSING ? 'default' : 'outline'}
                                             size="sm"
                                             onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.PROCESSING)}
                                           >
                                             <PackageOpen className="mr-2 h-4 w-4" />
                                             Processing
                                           </Button>
-                                          <Button 
-                                            variant={selectedOrder.status === OrderStatus.SHIPPED ? 'default' : 'outline'} 
+                                          <Button
+                                            variant={selectedOrder.status === OrderStatus.SHIPPED ? 'default' : 'outline'}
                                             size="sm"
                                             onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.SHIPPED)}
                                           >
                                             <Truck className="mr-2 h-4 w-4" />
                                             Shipped
                                           </Button>
-                                          <Button 
-                                            variant={selectedOrder.status === OrderStatus.DELIVERED ? 'default' : 'outline'} 
+                                          <Button
+                                            variant={selectedOrder.status === OrderStatus.DELIVERED ? 'default' : 'outline'}
                                             size="sm"
                                             onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.DELIVERED)}
                                           >
                                             <CheckCircle className="mr-2 h-4 w-4" />
                                             Delivered
                                           </Button>
-                                          <Button 
-                                            variant={selectedOrder.status === OrderStatus.CANCELLED ? 'destructive' : 'outline'} 
+                                          <Button
+                                            variant={selectedOrder.status === OrderStatus.CANCELLED ? 'destructive' : 'outline'}
                                             size="sm"
                                             onClick={() => handleStatusChange(selectedOrder.id, OrderStatus.CANCELLED)}
                                           >
@@ -444,7 +465,7 @@ const AdminOrders = () => {
                                           </Button>
                                         </div>
                                       </div>
-                                      
+
                                       <div className="flex justify-between">
                                         <Button variant="outline">
                                           <Download className="mr-2 h-4 w-4" />
@@ -455,7 +476,7 @@ const AdminOrders = () => {
                                         </Button>
                                       </div>
                                     </div>
-                                  )}
+                                  ) : null}
                                 </DialogContent>
                               </Dialog>
                             </div>
@@ -470,7 +491,7 @@ const AdminOrders = () => {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </>
   );

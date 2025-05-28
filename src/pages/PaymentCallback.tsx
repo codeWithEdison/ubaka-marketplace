@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useCart } from '@/contexts/CartContext';
 
 export function PaymentCallback() {
   const [searchParams] = useSearchParams();
@@ -15,14 +16,26 @@ export function PaymentCallback() {
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
+  const { removeItem } = useCart();
+
   useEffect(() => {
     const verifyTransaction = async () => {
       try {
         const transactionId = searchParams.get('transaction_id');
         const status = searchParams.get('status');
 
-        if (status === 'cancelled') {
-          // Redirect back to checkout with a cancelled status
+        if (status === 'successful') {
+          removeItem('all');
+          toast({
+            title: 'Payment Successful',
+            description: 'Your payment was successful. Redirecting to your orders...',
+          });
+          setIsVerifying(false);
+          setVerificationStatus('success');
+          setTimeout(() => {
+            navigate('/account?tab=orders', { replace: true });
+          }, 2000);
+        } else if (status === 'cancelled') {
           navigate('/checkout', { state: { paymentCancelled: true } });
           return;
         }
@@ -39,8 +52,6 @@ export function PaymentCallback() {
             title: 'Payment Successful',
             description: 'Your payment has been processed successfully.',
           });
-          // TODO: Call backend API to save order details and transaction info
-          // Then redirect to order confirmation page
           setTimeout(() => {
             navigate('/order-confirmation', {
               state: {
@@ -66,7 +77,7 @@ export function PaymentCallback() {
     };
 
     verifyTransaction();
-  }, [searchParams, navigate, toast]);
+  }, [searchParams, navigate, toast, removeItem]);
 
   if (isVerifying) {
     return (

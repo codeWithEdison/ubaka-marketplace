@@ -302,7 +302,57 @@ export const finalizeOrderPayment = async (orderId: string, paymentMethod: strin
     console.error('Error clearing cart after order finalization:', cartError);
   }
 
-  return updatedOrder; // Return the updated order object
+  // Fetch the updated order with user data to return
+  const { data: updatedOrderWithUser, error: fetchError } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items (
+        id,
+        quantity,
+        price,
+        products (
+          id,
+          name
+        )
+      )
+    `)
+    .eq('id', orderId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching updated order with user data:', fetchError);
+    // Return the basic updated data as a fallback, though this might still cause rendering issues
+    return updatedOrder as Order; // 'updatedOrder' is the result from the update call
+  }
+
+  // Extract user info from shipping address
+  const shippingAddress = updatedOrderWithUser.shipping_address as {
+    fullName: string;
+    email?: string;
+    phone: string;
+    addressLine1: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+  };
+
+  // Split fullName into first and last name
+  const nameParts = shippingAddress.fullName.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
+  // Return the updated order object with the user data
+  return {
+    ...updatedOrderWithUser,
+    user: {
+      id: updatedOrderWithUser.user_id,
+      email: shippingAddress.email || '',
+      first_name: firstName,
+      last_name: lastName
+    }
+  } as Order;
 };
 
 // Update an order status

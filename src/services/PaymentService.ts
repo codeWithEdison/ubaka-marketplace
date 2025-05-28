@@ -540,7 +540,7 @@ export const initiatePayment = async (paymentDetails: PaymentDetails): Promise<F
           customizations: {
             title: 'Ubaka Marketplace',
             description: 'Payment for your purchase',
-            logo: '/logo.png', 
+            logo: '/logo.png',
           },
           onClose: () => {
             reject(new Error('Payment cancelled by user'));
@@ -573,10 +573,13 @@ export const initiatePayment = async (paymentDetails: PaymentDetails): Promise<F
 
 export const verifyPayment = async (transactionId: string): Promise<FlutterwaveResponse> => {
   try {
+    const secretKey = import.meta.env.VITE_FLUTTERWAVE_SECRET_KEY;
+    console.log('Using secret key for verification (first 4 chars):', secretKey ? secretKey.substring(0, 4) : 'Not set');
+
     const response = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_FLUTTERWAVE_SECRET_KEY}`,
+        'Authorization': `Bearer ${secretKey}`,
         'Content-Type': 'application/json',
       },
     });
