@@ -58,6 +58,7 @@ export const fetchOrderById = async (orderId: string): Promise<Order> => {
     .from('orders')
     .select(`
       *,
+      total_amount: total,
       order_items (
         id,
         quantity,

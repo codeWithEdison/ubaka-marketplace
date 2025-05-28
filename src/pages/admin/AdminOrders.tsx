@@ -313,7 +313,7 @@ const AdminOrders = () => {
                           </TableCell>
                           <TableCell>{formatDate(order.created_at)}</TableCell>
                           <TableCell>{getStatusBadge(order.status)}</TableCell>
-                          <TableCell>{order.total_amount !== undefined ? formatCurrency(order.total_amount) : 'N/A'}</TableCell>
+                          <TableCell>{typeof order.total_amount === 'number' && isFinite(order.total_amount) ? formatCurrency(order.total_amount) : 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
                               <Dialog open={isViewDialogOpen && selectedOrder?.id === order.id} onOpenChange={async (open) => {
@@ -413,7 +413,7 @@ const AdminOrders = () => {
                                               ))}
                                               <TableRow>
                                                 <TableCell colSpan={3} className="text-right font-medium">Total</TableCell>
-                                                <TableCell className="text-right font-medium">{selectedOrder?.total_amount !== undefined ? formatCurrency(selectedOrder.total_amount) : 'N/A'}</TableCell>
+                                                <TableCell className="text-right font-medium">{typeof selectedOrder?.total_amount === 'number' && isFinite(selectedOrder.total_amount) ? formatCurrency(selectedOrder.total_amount) : 'N/A'}</TableCell>
                                               </TableRow>
                                             </TableBody>
                                           </Table>
