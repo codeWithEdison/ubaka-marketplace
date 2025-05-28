@@ -26,7 +26,6 @@ import Admin from "./pages/admin/Admin";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminOrders from "./pages/admin/AdminOrders";
-import AdminSupplyChain from "./pages/admin/AdminSupplyChain";
 import { PaymentCallback } from "./pages/PaymentCallback";
 import TestPayment from "./pages/TestPayment";
 
@@ -71,7 +70,6 @@ const AppRoutes = () => (
     <Route path="/admin/products" element={<AuthGuard requireAdmin={true}><AdminProducts /></AuthGuard>} />
     <Route path="/admin/categories" element={<AuthGuard requireAdmin={true}><AdminCategories /></AuthGuard>} />
     <Route path="/admin/orders" element={<AuthGuard requireAdmin={true}><AdminOrders /></AuthGuard>} />
-    <Route path="/admin/supply-chain" element={<AuthGuard requireAdmin={true}><AdminSupplyChain /></AuthGuard>} />
     
     {/* Catch-all route */}
     <Route path="*" element={<NotFound />} />
