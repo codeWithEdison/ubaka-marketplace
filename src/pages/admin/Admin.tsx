@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, List, ShoppingBag, Truck, ArrowUpRight, DollarSign, Users } from 'lucide-react';
+import { Package, List, ShoppingBag, Truck, ArrowUpRight, DollarSign, Users, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,73 +15,110 @@ import {
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AdminSidebar from '@/components/AdminSidebar';
-import { fetchCategories } from '@/services/CategoryService';
-import { fetchProducts } from '@/services/ProductService';
-
-const salesData = [
-  { name: 'Jan', total: 1234 },
-  { name: 'Feb', total: 2342 },
-  { name: 'Mar', total: 3463 },
-  { name: 'Apr', total: 2878 },
-  { name: 'May', total: 3904 },
-  { name: 'Jun', total: 4532 },
-  { name: 'Jul', total: 4332 },
-  { name: 'Aug', total: 5214 },
-  { name: 'Sep', total: 4685 },
-  { name: 'Oct', total: 5120 },
-  { name: 'Nov', total: 6543 },
-  { name: 'Dec', total: 7654 },
-];
+import { fetchAdminStats, AdminStats } from '@/services/AdminService';
+import { formatCurrency } from '@/lib/utils';
 
 const Admin = () => {
   const [dateRange, setDateRange] = useState<'day' | 'week' | 'month' | 'year'>('month');
-  const [stats, setStats] = useState({
-    products: 0,
-    categories: 0,
-    loading: true,
-    error: null as string | null
-  });
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const [categories, productsData] = await Promise.all([
-          fetchCategories(),
-          fetchProducts()
-        ]);
-        
-        setStats({
-          products: productsData.count,
-          categories: categories.length,
-          loading: false,
-          error: null
-        });
+        setLoading(true);
+        const data = await fetchAdminStats();
+        setStats(data);
+        setError(null);
       } catch (err) {
-        setStats(prev => ({
-          ...prev,
-          loading: false,
-          error: err instanceof Error ? err.message : 'Failed to load stats'
-        }));
+        setError(err instanceof Error ? err.message : 'Failed to load stats');
+      } finally {
+        setLoading(false);
       }
     };
 
     loadStats();
   }, []);
 
+  // Filter sales data based on date range
+  const getFilteredSalesData = () => {
+    if (!stats?.salesByMonth) return [];
+
+    const now = new Date();
+    const months = stats.salesByMonth;
+
+    switch (dateRange) {
+      case 'day':
+        // Show last 7 days
+        return months.slice(-7);
+      case 'week':
+        // Show last 4 weeks
+        return months.slice(-4);
+      case 'month':
+        // Show last 6 months
+        return months.slice(-6);
+      case 'year':
+        // Show all months
+        return months;
+      default:
+        return months;
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen pt-24 pb-16">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="flex items-center justify-center h-[60vh]">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen pt-24 pb-16">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="text-center py-12">
+              <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Dashboard</h1>
+              <p className="text-muted-foreground">{error}</p>
+              <Button
+                className="mt-4"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
-      
+
       <main className="min-h-screen pt-24 pb-16">
         <div className="container mx-auto px-4 md:px-6">
           <h1 className="text-3xl md:text-4xl font-bold mb-8">Admin Dashboard</h1>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {/* Sidebar */}
             <div className="md:col-span-1">
               <AdminSidebar />
             </div>
-            
+
             {/* Main Content */}
             <div className="md:col-span-2 lg:col-span-3 space-y-8">
               {/* Overview Cards */}
@@ -91,8 +128,12 @@ const Admin = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                        <h3 className="text-2xl font-bold mt-1">$45,231.89</h3>
-                        <p className="text-xs text-muted-foreground mt-1">+20.1% from last month</p>
+                        <h3 className="text-2xl font-bold mt-1">
+                          {formatCurrency(stats?.totalRevenue || 0)}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          From {stats?.totalOrders || 0} orders
+                        </p>
                       </div>
                       <div className="p-2 bg-primary/10 rounded-full">
                         <DollarSign className="h-5 w-5 text-primary" />
@@ -100,14 +141,14 @@ const Admin = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Products</p>
                         <h3 className="text-2xl font-bold mt-1">
-                          {stats.loading ? '...' : stats.products}
+                          {stats?.totalProducts || 0}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-1">Total products</p>
                       </div>
@@ -117,14 +158,14 @@ const Admin = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Categories</p>
                         <h3 className="text-2xl font-bold mt-1">
-                          {stats.loading ? '...' : stats.categories}
+                          {stats?.totalCategories || 0}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-1">Total categories</p>
                       </div>
@@ -134,14 +175,16 @@ const Admin = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                        <h3 className="text-2xl font-bold mt-1">573</h3>
-                        <p className="text-xs text-muted-foreground mt-1">+201 since last week</p>
+                        <p className="text-sm font-medium text-muted-foreground">Users</p>
+                        <h3 className="text-2xl font-bold mt-1">
+                          {stats?.totalUsers || 0}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">Total registered users</p>
                       </div>
                       <div className="p-2 bg-primary/10 rounded-full">
                         <Users className="h-5 w-5 text-primary" />
@@ -150,39 +193,39 @@ const Admin = () => {
                   </CardContent>
                 </Card>
               </div>
-              
+
               {/* Sales Chart */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Sales Overview</CardTitle>
-                      <CardDescription>Daily sales revenue for the current year</CardDescription>
+                      <CardDescription>Sales revenue for the selected period</CardDescription>
                     </div>
                     <div className="flex space-x-2">
-                      <Button 
-                        variant={dateRange === 'day' ? 'default' : 'outline'} 
+                      <Button
+                        variant={dateRange === 'day' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setDateRange('day')}
                       >
                         Day
                       </Button>
-                      <Button 
-                        variant={dateRange === 'week' ? 'default' : 'outline'} 
+                      <Button
+                        variant={dateRange === 'week' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setDateRange('week')}
                       >
                         Week
                       </Button>
-                      <Button 
-                        variant={dateRange === 'month' ? 'default' : 'outline'} 
+                      <Button
+                        variant={dateRange === 'month' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setDateRange('month')}
                       >
                         Month
                       </Button>
-                      <Button 
-                        variant={dateRange === 'year' ? 'default' : 'outline'} 
+                      <Button
+                        variant={dateRange === 'year' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setDateRange('year')}
                       >
@@ -194,14 +237,14 @@ const Admin = () => {
                 <CardContent>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={salesData}>
+                      <BarChart data={getFilteredSalesData()}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis 
-                          tickFormatter={(value) => `$${value}`}
+                        <XAxis dataKey="month" />
+                        <YAxis
+                          tickFormatter={(value) => formatCurrency(value)}
                         />
-                        <Tooltip 
-                          formatter={(value) => [`$${value}`, 'Revenue']}
+                        <Tooltip
+                          formatter={(value) => [formatCurrency(value as number), 'Revenue']}
                         />
                         <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -209,7 +252,33 @@ const Admin = () => {
                   </div>
                 </CardContent>
               </Card>
-              
+
+              {/* Recent Orders */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Orders</CardTitle>
+                  <CardDescription>Latest 5 orders from your store</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {stats?.recentOrders.map((order) => (
+                      <div key={order.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                        <div>
+                          <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{formatCurrency(order.total)}</p>
+                          <p className="text-sm text-muted-foreground capitalize">{order.status}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Quick Links */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                 <Link to="/admin/products">
@@ -230,7 +299,7 @@ const Admin = () => {
                     </CardContent>
                   </Card>
                 </Link>
-                
+
                 <Link to="/admin/categories">
                   <Card className="hover:bg-accent/50 transition-colors">
                     <CardContent className="p-6">
@@ -249,7 +318,7 @@ const Admin = () => {
                     </CardContent>
                   </Card>
                 </Link>
-                
+
                 <Link to="/admin/orders">
                   <Card className="hover:bg-accent/50 transition-colors">
                     <CardContent className="p-6">
@@ -268,31 +337,12 @@ const Admin = () => {
                     </CardContent>
                   </Card>
                 </Link>
-                
-                <Link to="/admin/supply-chain">
-                  <Card className="hover:bg-accent/50 transition-colors">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full mr-4">
-                            <Truck className="h-5 w-5 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium">Supply Chain</h3>
-                            <p className="text-sm text-muted-foreground">Manage inventory and suppliers</p>
-                          </div>
-                        </div>
-                        <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
               </div>
             </div>
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </>
   );
