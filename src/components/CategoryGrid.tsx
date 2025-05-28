@@ -5,19 +5,15 @@ import { fetchCategories } from '@/services/CategoryService';
 import { Category, getFallbackImageUrl } from '@/lib/utils';
 
 const CategoryGrid = () => {
-  const [isVisible, setIsVisible] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   useEffect(() => {
     const loadCategories = async () => {
       try {
         const data = await fetchCategories();
-        console.log('Raw API response:', data);
-        console.log('Data type:', typeof data);
-        console.log('Is array?', Array.isArray(data));
-        console.log('Data length:', data.length);
+        console.log('Fetched categories:', data);
         setCategories(data);
       } catch (err) {
         console.error('Error loading categories:', err);
@@ -28,34 +24,6 @@ const CategoryGrid = () => {
     };
 
     loadCategories();
-  }, []);
-
-  useEffect(() => {
-    console.log('Categories state after update:', categories);
-    console.log('Categories length:', categories.length);
-    console.log('First category:', categories[0]);
-  }, [categories]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    
-    const element = document.getElementById('category-grid');
-    if (element) {
-      observer.observe(element);
-    }
-    
-    return () => {
-      if (element) {
-        observer.unobserve(element);
-      }
-    };
   }, []);
 
   if (isLoading) {
@@ -100,46 +68,41 @@ const CategoryGrid = () => {
             Explore our wide range of construction materials and supplies organized by category.
           </p>
         </div>
-        
-        <div 
-          id="category-grid"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
-        >
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
           {categories && categories.length > 0 ? (
-            categories.map((category, index) => (
-              <Link
-                key={category.id}
-                to={`/categories/${category.id}`}
-                className={`group relative overflow-hidden rounded-xl h-72 transition-all duration-500 transform ${
-                  isVisible 
-                    ? 'translate-y-0 opacity-100' 
-                    : 'translate-y-20 opacity-0'
-                }`}
-                style={{ transitionDelay: `${index * 0.1}s` }}
-              >
-                {/* Background image */}
-                <div className="absolute inset-0 bg-ubaka-900/40 group-hover:bg-ubaka-900/30 transition-all duration-300 z-10" />
-                
-                <img 
-                  src={category.image || getFallbackImageUrl()} 
-                  alt={category.name}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-                
-                {/* Content */}
-                <div className="absolute inset-0 p-6 flex flex-col justify-end z-20">
-                  <h3 className="text-xl font-semibold text-white mb-1">{category.name}</h3>
-                  <p className="text-white/80 text-sm mb-4 line-clamp-2">{category.description || 'No description available'}</p>
-                  
-                  <div className="flex items-center text-sm text-white space-x-2 transition-all transform group-hover:translate-x-2">
-                    <span>
-                      {category.count || (category.product_count?.[0]?.count || 0)} Products
-                    </span>
-                    <ArrowRight className="h-4 w-4" />
+            categories.map((category) => {
+              console.log('Rendering category:', category);
+              return (
+                <Link
+                  key={category.id}
+                  to={`/categories/${category.id}`}
+                  className="group relative overflow-hidden rounded-xl h-72"
+                >
+                  {/* Background image */}
+                  <div className="absolute inset-0 bg-ubaka-900/40 group-hover:bg-ubaka-900/30 transition-all duration-300 z-10" />
+
+                  <img
+                    src={category.image || getFallbackImageUrl()}
+                    alt={category.name}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+
+                  {/* Content */}
+                  <div className="absolute inset-0 p-6 flex flex-col justify-end z-20">
+                    <h3 className="text-xl font-semibold text-white mb-1">{category.name}</h3>
+                    <p className="text-white/80 text-sm mb-4 line-clamp-2">{category.description || 'No description available'}</p>
+
+                    <div className="flex items-center text-sm text-white space-x-2 transition-all transform group-hover:translate-x-2">
+                      <span>
+                        {category.count || 0} Products
+                      </span>
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))
+                </Link>
+              );
+            })
           ) : (
             <div className="col-span-full text-center py-8">
               <p className="text-muted-foreground">No categories found</p>
