@@ -10,7 +10,9 @@ import {
   AlertCircle, 
   CheckCircle, 
   Loader2,
-  ChevronRight
+  ChevronRight,
+  ExternalLink,
+  Check
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -357,11 +359,20 @@ const Checkout = () => {
   };
 
   const handleCryptoPayment = async () => {
-     // Basic validation
-     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phoneNumber || !formData.address || !formData.city || !formData.state || !formData.zipCode || !formData.country) {
+    // Basic validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phoneNumber || !formData.address || !formData.city || !formData.state || !formData.zipCode || !formData.country) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required contact and shipping details.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!isMetaMaskInstalled) {
+      toast({
+        title: "MetaMask Required",
+        description: "Please install MetaMask browser extension to pay with cryptocurrency.",
         variant: "destructive"
       });
       return;
@@ -376,32 +387,43 @@ const Checkout = () => {
       return;
     }
 
+    if (!ethNetwork) {
+      toast({
+        title: "Network Error",
+        description: "Unable to detect Ethereum network. Please check your MetaMask connection.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsPaymentProcessing(true);
     setCryptoPaymentStatus(null);
+    setPaymentError('');
 
     try {
       const orderDetails = getOrderDetails();
 
-       // Create the order in pending state before initiating payment
-       const createdOrder = await createOrder(
-         items,
-         {
-           fullName: `${formData.firstName} ${formData.lastName}`,
-           addressLine1: formData.address,
-           city: formData.city,
-           state: formData.state,
-           postalCode: formData.zipCode,
-           country: formData.country,
-           phone: formData.phoneNumber,
-         },
-         'crypto' // Indicate intended payment method
-       );
+      // Create the order in pending state before initiating payment
+      const createdOrder = await createOrder(
+        items,
+        {
+          fullName: `${formData.firstName} ${formData.lastName}`,
+          addressLine1: formData.address,
+          city: formData.city,
+          state: formData.state,
+          postalCode: formData.zipCode,
+          country: formData.country,
+          phone: formData.phoneNumber,
+        },
+        'crypto'
+      );
 
-       const result = await PaymentServiceTypes.default.processCryptoPayment(walletAddress, orderDetails); // Use PaymentServiceTypes.default
+      const result = await PaymentServiceTypes.default.processCryptoPayment(walletAddress, orderDetails);
 
       if (result.success) {
         setCryptoTransactionHash(result.transactionId || '');
         setCryptoPaymentStatus('success');
+        setOrderReference(result.orderReference || '');
 
         toast({
           title: "Payment sent!",
@@ -423,15 +445,21 @@ const Checkout = () => {
             state: {
               orderId: createdOrder.id,
               paymentMethod: 'crypto',
-              transactionHash: result.transactionId
+              transactionHash: result.transactionId,
+              orderReference: result.orderReference
             }
           });
 
         } catch (finalizeError) {
-           console.error('Error finalizing crypto order on backend:', finalizeError);
-           setCryptoPaymentStatus('error');
-           setPaymentError(finalizeError instanceof Error ? finalizeError.message : 'An error occurred while finalizing your crypto order.');
-           // You might want to leave the order in pending/needs-manual-review state on backend
+          console.error('Error finalizing crypto order on backend:', finalizeError);
+          setCryptoPaymentStatus('error');
+          setPaymentError(finalizeError instanceof Error ? finalizeError.message : 'An error occurred while finalizing your crypto order.');
+          
+          toast({
+            title: "Order Update Failed",
+            description: "Payment was sent but we couldn't update your order. Please contact support with your transaction hash.",
+            variant: "destructive"
+          });
         }
 
       } else {
@@ -659,30 +687,171 @@ const Checkout = () => {
                         </AlertDescription>
                       </Alert>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Flutterwave Payment Option */}
-                        <div className="border rounded-lg p-4 hover:border-primary cursor-pointer" onClick={handleFiatPayment}>
-                          <div className="flex items-center space-x-3">
-                            <CreditCard className="h-6 w-6" />
-                            <div>
-                              <h3 className="font-medium">Pay with Card/Mobile Money</h3>
-                              <p className="text-sm text-muted-foreground">Visa, Mastercard, Mobile Money</p>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  {/* Flutterwave Payment Option */}
+  <div 
+    className="group relative border-2 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer bg-white"
+    onClick={handleFiatPayment}
+  >
+    <div className="flex items-start space-x-4">
+      {/* Icon Container */}
+      <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+        <CreditCard className="h-6 w-6 text-primary" />
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <h3 className="font-semibold text-lg text-gray-900 mb-1">
+          Pay with Card/Mobile Money
+        </h3>
+        <p className="text-sm text-muted-foreground mb-3">
+          Secure payment with your preferred method
+        </p>
+        
+        {/* Payment Methods Logos */}
+        <div className="flex items-center space-x-4">
+          {/* Visa Logo */}
+          <div className="flex items-center space-x-1">
+            <img 
+              src="https://cdn.worldvectorlogo.com/logos/visa-2.svg" 
+              alt="Visa" 
+              className="h-12  w-auto"
+            />
+          </div>
+          
+          {/* Mastercard Logo */}
+          <div className="flex items-center space-x-1">
+            <img 
+              src="https://cdn.worldvectorlogo.com/logos/mastercard-6.svg" 
+              alt="Mastercard" 
+              className="h-12  w-auto"
+            />
+          </div>
+          
+          {/* MTN Mobile Money Logo */}
+          <div className="flex items-center space-x-1">
+            <img 
+              src="https://images.seeklogo.com/logo-png/55/1/mtn-momo-mobile-money-uganda-logo-png_seeklogo-556395.png" 
+              alt="MTN Mobile Money" 
+              className="h-12  w-auto"
+            />
+            {/* <span className="text-xs text-gray-600 font-medium">MoMo</span> */}
+          </div>
+        </div>
+      </div>
+      
+      {/* Arrow Indicator */}
+      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ChevronRight className="h-5 w-5 text-primary" />
+      </div>
+    </div>
+    
+    {/* Hover Effect Overlay */}
+    <div className="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+  </div>
 
-                        {/* Crypto Payment Option */}
-                        <div className="border rounded-lg p-4 hover:border-primary cursor-pointer" onClick={handleCryptoPayment}>
-                          <div className="flex items-center space-x-3">
-                            <Bitcoin className="h-6 w-6" />
-                            <div>
-                              <h3 className="font-medium">Pay with Crypto</h3>
-                              <p className="text-sm text-muted-foreground">Ethereum (ETH)</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
+  {/* Crypto Payment Option */}
+  <div 
+    className={`group relative border-2 rounded-xl p-6 transition-all duration-300 bg-white ${
+      !isMetaMaskInstalled 
+        ? 'opacity-50 cursor-not-allowed border-gray-200' 
+        : 'hover:border-primary hover:shadow-lg cursor-pointer'
+    }`}
+    onClick={!isMetaMaskInstalled ? undefined : !isConnected ? connectWallet : handleCryptoPayment}
+  >
+    <div className="flex items-start space-x-4">
+      {/* Icon Container */}
+      <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+        !isMetaMaskInstalled 
+          ? 'bg-gray-100' 
+          : isConnected 
+            ? 'bg-green-100 group-hover:bg-green-200' 
+            : 'bg-orange-100 group-hover:bg-orange-200'
+      }`}>
+        {!isMetaMaskInstalled ? (
+          <Bitcoin className="h-6 w-6 text-gray-400" />
+        ) : isConnected ? (
+          <div className="relative">
+            <Bitcoin className="h-6 w-6 text-green-600" />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+              <Check className="h-2 w-2 text-white" />
+            </div>
+          </div>
+        ) : (
+          <Bitcoin className="h-6 w-6 text-orange-600" />
+        )}
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <h3 className={`font-semibold text-lg mb-1 ${
+          !isMetaMaskInstalled ? 'text-gray-500' : 'text-gray-900'
+        }`}>
+          Pay with Crypto
+        </h3>
+        
+        {/* Status Message */}
+        <div className="mb-3">
+          {!isMetaMaskInstalled ? (
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              <p className="text-sm text-red-600 font-medium">MetaMask not installed</p>
+            </div>
+          ) : !isConnected ? (
+            <div className="flex items-center space-x-2">
+              <Wallet className="h-4 w-4 text-orange-500" />
+              <p className="text-sm text-orange-600 font-medium">Click to connect MetaMask</p>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Check className="h-4 w-4 text-green-500" />
+              <p className="text-sm text-green-600 font-medium">Wallet Connected</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Wallet Address or Connection Info */}
+        {isConnected ? (
+          <div className="flex items-center space-x-2 bg-gray-50 rounded-lg px-3 py-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-sm font-mono text-gray-700">
+              {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+            </span>
+          </div>
+        ) : !isMetaMaskInstalled ? (
+          <a 
+            href="https://metamask.io/download/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="h-3 w-3" />
+            <span>Install MetaMask</span>
+          </a>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Fast and secure blockchain payments
+          </p>
+        )}
+      </div>
+      
+      {/* Arrow Indicator */}
+      {isMetaMaskInstalled && (
+        <div className={`flex-shrink-0 transition-opacity ${
+          isConnected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}>
+          <ChevronRight className="h-5 w-5 text-primary" />
+        </div>
+      )}
+    </div>
+    
+    {/* Hover Effect Overlay */}
+    {isMetaMaskInstalled && (
+      <div className="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+    )}
+  </div>
+</div>
                       {paymentStatus === 'success' && (
                         <Alert className="bg-green-50 border-green-300">
                           <CheckCircle className="h-4 w-4 text-green-600" />
