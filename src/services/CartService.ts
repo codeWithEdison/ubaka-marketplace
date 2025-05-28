@@ -8,7 +8,7 @@ export const fetchCart = async (): Promise<CartItem[]> => {
   if (!user) {
     throw new Error('Authentication required to access cart');
   }
-  
+
   // Fetch cart items with joined product data
   const { data, error } = await supabase
     .from('cart_items')
@@ -19,11 +19,11 @@ export const fetchCart = async (): Promise<CartItem[]> => {
       products:product_id (*)
     `)
     .eq('user_id', user.id);
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   // Transform the data to match CartItem structure
   return (data || []).map(item => {
     // Convert the Supabase product data to our Product type
@@ -32,7 +32,7 @@ export const fetchCart = async (): Promise<CartItem[]> => {
       name: item.products.name,
       price: item.products.price,
       description: item.products.description || '',
-      image: item.products.image_url || '',
+      image: item.products.image || '',
       category: item.products.category_id || '', // Using string for category
       inStock: item.products.in_stock || true,
       featured: item.products.featured || false,
@@ -41,7 +41,7 @@ export const fetchCart = async (): Promise<CartItem[]> => {
       new: item.products.is_new || false, // Changed from isNew to new to match Product interface
       specifications: item.products.specifications || {}
     } as Product;
-    
+
     return {
       product,
       quantity: item.quantity
@@ -55,34 +55,34 @@ export const syncCartWithServer = async (localCart: CartItem[]): Promise<CartIte
   if (!user) {
     throw new Error('Authentication required to sync cart');
   }
-  
+
   // First, clear the server cart
   await supabase
     .from('cart_items')
     .delete()
     .eq('user_id', user.id);
-  
+
   // If there are no items in the local cart, just return an empty array
   if (localCart.length === 0) {
     return [];
   }
-  
+
   // Add each item from the local cart to the server cart
   const cartItems = localCart.map(item => ({
     user_id: user.id,
     product_id: item.product.id,
     quantity: item.quantity
   }));
-  
+
   // Insert all items into the cart
   const { error } = await supabase
     .from('cart_items')
     .insert(cartItems);
-  
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   // Return the updated cart
   return fetchCart();
 };
@@ -93,7 +93,7 @@ export const addToCart = async (productId: string, quantity: number = 1): Promis
   if (!user) {
     throw new Error('Authentication required to add to cart');
   }
-  
+
   // Check if the item is already in the cart
   const { data: existingItem } = await supabase
     .from('cart_items')
@@ -101,7 +101,7 @@ export const addToCart = async (productId: string, quantity: number = 1): Promis
     .eq('user_id', user.id)
     .eq('product_id', productId)
     .maybeSingle();
-  
+
   if (existingItem) {
     // Update the quantity
     await supabase
@@ -126,7 +126,7 @@ export const updateCartItemQuantity = async (productId: string, quantity: number
   if (!user) {
     throw new Error('Authentication required to update cart');
   }
-  
+
   await supabase
     .from('cart_items')
     .update({ quantity })
@@ -140,7 +140,7 @@ export const removeFromCart = async (productId: string): Promise<void> => {
   if (!user) {
     throw new Error('Authentication required to remove from cart');
   }
-  
+
   // If productId is 'all', remove all items from the cart
   if (productId === 'all') {
     await supabase
