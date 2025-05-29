@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -19,16 +18,16 @@ const Contact = () => {
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     // Simulate form submission
     setTimeout(() => {
       toast({
@@ -45,22 +44,22 @@ const Contact = () => {
       setIsSubmitting(false);
     }, 1500);
   };
-  
+
   const contactInfo = [
     {
       icon: <Phone className="h-5 w-5 text-primary" />,
       title: "Phone",
-      details: ["+1 (800) 555-UBAKA", "Monday-Friday, 8am-8pm EST"]
+      details: ["0788240303"]
     },
     {
       icon: <Mail className="h-5 w-5 text-primary" />,
       title: "Email",
-      details: ["support@ubaka.com", "sales@ubaka.com"]
+      details: ["contact@ubaka.com"]
     },
     {
       icon: <MapPin className="h-5 w-5 text-primary" />,
       title: "Headquarters",
-      details: ["1234 Construction Ave", "New York, NY 10001"]
+      details: ["Kigali, Rwanda"]
     },
     {
       icon: <Clock className="h-5 w-5 text-primary" />,
@@ -68,7 +67,7 @@ const Contact = () => {
       details: ["Mon-Fri: 8am-8pm EST", "Sat: 9am-5pm EST"]
     }
   ];
-  
+
   const faqs = [
     {
       question: "How quickly can you deliver materials?",
@@ -91,7 +90,7 @@ const Contact = () => {
   return (
     <>
       <Navbar />
-      
+
       <main className="min-h-screen pt-24 pb-16">
         <div className="container mx-auto px-4 md:px-6">
           {/* Hero Section */}
@@ -101,7 +100,7 @@ const Contact = () => {
               Have questions or need assistance? We're here to help you with all your construction material needs.
             </p>
           </div>
-          
+
           {/* Contact Form and Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
             {/* Contact Form */}
@@ -185,11 +184,11 @@ const Contact = () => {
                 </CardContent>
               </Card>
             </div>
-            
+
             {/* Contact Info */}
             <div className="space-y-6">
               <h2 className="text-2xl font-bold mb-6">Get in Touch</h2>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {contactInfo.map((info, index) => (
                   <Card key={index} className="h-full">
@@ -209,22 +208,26 @@ const Contact = () => {
                   </Card>
                 ))}
               </div>
-              
+
               <Card className="mt-6">
                 <CardContent className="pt-6">
                   <h3 className="font-semibold mb-4">Our Locations</h3>
                   <div className="aspect-video w-full rounded-md overflow-hidden">
-                    <img 
-                      src="https://images.unsplash.com/photo-1577415124269-fc1140a69e91?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
-                      alt="Map of Ubaka locations"
-                      className="w-full h-full object-cover"
-                    />
+                    <iframe
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3987.487182995609!2d30.061640874967168!3d-1.958691998023567!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x19dca5d5b9897711%3A0x34e7b1e5cded7867!2sUR%20College%20of%20Science%20and%20Technology!5e0!3m2!1sen!2srw!4v1748516615087!5m2!1sen!2srw"
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      allowFullScreen={true}
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    ></iframe>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </div>
-          
+
           {/* FAQs */}
           <div className="mb-20">
             <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
@@ -243,7 +246,7 @@ const Contact = () => {
               <Button variant="outline">View All FAQs</Button>
             </div>
           </div>
-          
+
           {/* Newsletter */}
           <div className="bg-secondary rounded-lg p-8 md:p-12 text-center">
             <h2 className="text-2xl font-bold mb-4">Stay Updated</h2>
@@ -261,7 +264,7 @@ const Contact = () => {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </>
   );

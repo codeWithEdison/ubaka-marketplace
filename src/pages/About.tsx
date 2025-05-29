@@ -1,4 +1,3 @@
-
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
@@ -9,25 +8,25 @@ import { Users, Target, Award, Clock, TrendingUp, Lightbulb } from 'lucide-react
 const About = () => {
   const teamMembers = [
     {
-      name: "Emma Richardson",
-      position: "CEO & Founder",
-      image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "With over 20 years in the construction industry, Emma founded Ubaka to revolutionize how construction materials are sourced and delivered."
+      name: "IRADUKUNDA Bonheur",
+      position: "CEO",
+      image: "/bobox.jpg",
+      description: "Leading the company with vision and strategic direction."
     },
     {
-      name: "Marcus Chen",
-      position: "Chief Operations Officer",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Marcus oversees Ubaka's logistics network, ensuring efficient operations and timely delivery of products to all our customers."
+      name: "UWIHANGANYE EDISON",
+      position: "Intelligence System Engineer",
+      image: "https://media.licdn.com/dms/image/v2/D4D03AQH_4THyS9-igg/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1715287233733?e=1753920000&v=beta&t=1tu6A3xMDVJxxIJTkiDepZ_Do0lvhQ59NCHB9ZhnxZE",
+      description: "Focusing on developing smart solutions and systems."
     },
     {
-      name: "Sofia Patel",
-      position: "Head of Product",
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Sofia leads our product team, continuously expanding our catalog with high-quality construction materials from trusted suppliers."
+      name: "Mugisha Edson",
+      position: "Construction Engineer",
+      image: "https://avatars.githubusercontent.com/u/109290022?v=4",
+      description: "Bringing expertise in construction and engineering practices."
     }
   ];
-  
+
   const values = [
     {
       icon: <Target className="h-8 w-8 text-primary" />,
@@ -64,7 +63,7 @@ const About = () => {
   return (
     <>
       <Navbar />
-      
+
       <main className="min-h-screen pt-24 pb-16">
         <div className="container mx-auto px-4 md:px-6">
           {/* Hero Section */}
@@ -74,7 +73,7 @@ const About = () => {
               We're transforming how the world sources construction materials through technology and exceptional service.
             </p>
           </div>
-          
+
           {/* Our Story */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-20 items-center">
             <div>
@@ -90,14 +89,14 @@ const About = () => {
               </p>
             </div>
             <div className="rounded-lg overflow-hidden">
-              <img 
-                src="https://images.unsplash.com/photo-1541976590-713941681591?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
-                alt="Ubaka headquarters" 
+              <img
+                src="https://images.unsplash.com/photo-1541976590-713941681591?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+                alt="Ubaka headquarters"
                 className="w-full h-full object-cover"
               />
             </div>
           </div>
-          
+
           {/* Our Values */}
           <div className="mb-20">
             <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Our Values</h2>
@@ -113,7 +112,7 @@ const About = () => {
               ))}
             </div>
           </div>
-          
+
           {/* Our Team */}
           <div className="mb-20">
             <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Leadership Team</h2>
@@ -121,9 +120,9 @@ const About = () => {
               {teamMembers.map((member, index) => (
                 <div key={index} className="text-center">
                   <div className="w-48 h-48 rounded-full overflow-hidden mx-auto mb-4">
-                    <img 
-                      src={member.image} 
-                      alt={member.name} 
+                    <img
+                      src={member.image}
+                      alt={member.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -134,7 +133,7 @@ const About = () => {
               ))}
             </div>
           </div>
-          
+
           {/* Milestones */}
           <div className="mb-20">
             <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Our Journey</h2>
@@ -180,7 +179,7 @@ const About = () => {
               </div>
             </div>
           </div>
-          
+
           {/* CTA */}
           <div className="bg-secondary rounded-lg p-8 md:p-12 text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">Join Our Journey</h2>
@@ -194,7 +193,7 @@ const About = () => {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </>
   );

@@ -13,7 +13,7 @@ interface ProductCardProps {
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const { addItem } = useCart();
-  
+
   // Calculate the animation delay based on index
   const animDelay = `${index * 0.1}s`;
 
@@ -31,7 +31,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   };
 
   return (
-    <Link 
+    <Link
       to={`/products/${product.id}`}
       className="group block"
       onMouseEnter={() => setIsHovered(true)}
@@ -45,7 +45,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             {product.discount}% OFF
           </div>
         )}
-        
+
         {/* New tag */}
         {product.new && (
           <div className="absolute top-4 right-4 z-10 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-md">
@@ -55,17 +55,17 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 
         {/* Product Image */}
         <div className={`relative pt-[75%] overflow-hidden bg-gray-100 dark:bg-ubaka-950/20`}>
-          <img 
-            src={product.image || 'https://via.placeholder.com/400x300?text=Product+Image'} 
-            alt={product.name} 
+          <img
+            src={product.image || 'https://via.placeholder.com/400x300?text=Product+Image'}
+            alt={product.name}
             className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${isHovered ? 'scale-110' : 'scale-100'}`}
           />
-          
+
           {/* Quick add button */}
           <div className={`absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 to-transparent transition-all duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'} flex justify-center`}>
-            <Button 
+            <Button
               size="sm"
-              variant="secondary" 
+              variant="secondary"
               onClick={handleAddToCart}
               className="w-full flex items-center justify-center"
             >
@@ -74,27 +74,26 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             </Button>
           </div>
         </div>
-        
+
         {/* Product Info */}
         <div className="p-4 flex-grow flex flex-col justify-between">
           <div>
             <div className="text-sm text-muted-foreground mb-1">
-              {typeof product.category === 'string' ? product.category : 
-               (product.category && typeof product.category === 'object' ? product.category.name : 'Uncategorized')}
+              {typeof product.category === 'string' ? product.category :
+                (product.category && typeof product.category === 'object' ? product.category.name : 'Uncategorized')}
             </div>
-            
+
             <h3 className="font-medium text-lg mb-1 line-clamp-2">{product.name}</h3>
-            
+
             <div className="flex items-center mb-2">
               <div className="flex items-center mr-2">
                 {[...Array(5)].map((_, i) => (
-                  <Star 
-                    key={i} 
-                    className={`h-3.5 w-3.5 ${
-                      i < Math.floor(product.rating || 0) 
-                        ? 'text-yellow-500 fill-yellow-500' 
+                  <Star
+                    key={i}
+                    className={`h-3.5 w-3.5 ${i < Math.floor(product.rating || 0)
+                        ? 'text-yellow-500 fill-yellow-500'
                         : 'text-gray-300'
-                    }`} 
+                      }`}
                   />
                 ))}
               </div>
@@ -103,20 +102,20 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               </span>
             </div>
           </div>
-          
+
           <div className="mt-2">
             <div className="flex items-center">
               <div className="text-lg font-semibold">
                 {formatPrice(product.price, product.discount)}
               </div>
-              
+
               {product.discount && product.discount > 0 && (
                 <div className="text-sm text-muted-foreground line-through ml-2">
                   {formatPrice(product.price)}
                 </div>
               )}
             </div>
-            
+
             <div className="text-sm mt-2 text-muted-foreground">
               {!product.inStock ? (
                 <span className="text-red-500">Out of Stock</span>
