@@ -27,6 +27,9 @@ const Account = () => {
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
+
+
+
             <TabsContent value="profile">
               <ProfileForm />
             </TabsContent>
