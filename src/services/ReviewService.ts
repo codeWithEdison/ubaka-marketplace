@@ -19,39 +19,72 @@ export interface Review {
 }
 
 interface Profile {
+  id: string;
+  email: string;
   first_name: string | null;
   last_name: string | null;
-  avatar_url: string | null;
+  avatar: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  country: string | null;
+  phone: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // Fetch reviews for a specific product
 export const fetchReviewsForProduct = async (productId: string): Promise<Review[]> => {
-  const { data, error } = await supabase
-    .from('reviews')
-    .select(`
-      *,
-      profiles:user_id (first_name, last_name, avatar_url)
-    `)
-    .eq('product_id', productId)
-    .eq('is_approved', true)
-    .order('created_at', { ascending: false });
+  if (!productId) {
+    throw new Error('Product ID is required');
+  }
 
-  if (error) throw new Error(error.message);
+  try {
+    // First get the reviews
+    const { data: reviews, error: reviewsError } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('product_id', productId)
+      .eq('is_approved', true)
+      .not('user_id', 'is', null)
+      .order('created_at', { ascending: false });
 
-  // Transform the data
-  return (data || []).map((review: any) => {
-    const profile = review.profiles || {};
+    if (reviewsError) throw new Error(reviewsError.message);
+    if (!reviews) return [];
 
-    return {
-      ...review,
-      user: {
-        name: profile.first_name && profile.last_name
-          ? `${profile.first_name} ${profile.last_name}`
-          : 'Anonymous User',
-        avatar: profile.avatar_url
-      }
-    };
-  });
+    // Then get the profiles for all users in the reviews
+    const userIds = reviews.map(review => review.user_id);
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', userIds);
+
+    if (profilesError) throw new Error(profilesError.message);
+
+    // Create a map of user profiles for easy lookup
+    const profileMap = new Map(
+      (profiles || []).map(profile => [profile.id, profile])
+    );
+
+    // Combine the data
+    return reviews.map(review => {
+      const profile = profileMap.get(review.user_id) || {};
+
+      return {
+        ...review,
+        user: {
+          name: profile.first_name && profile.last_name
+            ? `${profile.first_name} ${profile.last_name}`
+            : 'Anonymous User',
+          avatar: profile.avatar
+        }
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    throw error;
+  }
 };
 
 // Add a new review
@@ -61,57 +94,69 @@ export const createReview = async (reviewData: {
   title?: string;
   content?: string;
 }): Promise<Review> => {
-  // First get the user ID
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !userData.user) {
-    throw new Error('You must be logged in to submit a review.');
+  if (!reviewData.product_id) {
+    throw new Error('Product ID is required');
   }
 
-  // Check if user has made a verified purchase
-  const { data: orderData, error: orderError } = await supabase
-    .from('order_items')
-    .select('orders!inner(user_id)')
-    .eq('product_id', reviewData.product_id)
-    .eq('orders.user_id', userData.user.id)
-    .limit(1);
+  if (!reviewData.rating || reviewData.rating < 1 || reviewData.rating > 5) {
+    throw new Error('Rating must be between 1 and 5');
+  }
 
-  const isVerifiedPurchase = !orderError && orderData && orderData.length > 0;
+  try {
+    // First get the user ID
+    const { data: userData, error: userError } = await supabase.auth.getUser();
 
-  // Create the review
-  const { data, error } = await supabase
-    .from('reviews')
-    .insert({
-      ...reviewData,
-      user_id: userData.user.id,
-      is_verified_purchase: isVerifiedPurchase,
-      is_approved: false // Reviews need approval by default
-    })
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-
-  if (!data) throw new Error('Failed to create review');
-
-  // Get user profile for the response
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('first_name, last_name, avatar_url')
-    .eq('id', userData.user.id)
-    .single();
-
-  const profile = (profileData || {}) as Profile;
-
-  return {
-    ...data,
-    user: {
-      name: profile.first_name && profile.last_name
-        ? `${profile.first_name} ${profile.last_name}`
-        : 'Anonymous User',
-      avatar: profile.avatar_url
+    if (userError || !userData.user) {
+      throw new Error('You must be logged in to submit a review.');
     }
-  };
+
+    // Check if user has made a verified purchase
+    const { data: orderData, error: orderError } = await supabase
+      .from('order_items')
+      .select('orders!inner(user_id)')
+      .eq('product_id', reviewData.product_id)
+      .eq('orders.user_id', userData.user.id)
+      .limit(1);
+
+    const isVerifiedPurchase = !orderError && orderData && orderData.length > 0;
+
+    // Create the review
+    const { data: review, error: reviewError } = await supabase
+      .from('reviews')
+      .insert({
+        ...reviewData,
+        user_id: userData.user.id,
+        is_verified_purchase: isVerifiedPurchase,
+        is_approved: false // Reviews need approval by default
+      })
+      .select()
+      .single();
+
+    if (reviewError) throw new Error(reviewError.message);
+    if (!review) throw new Error('Failed to create review');
+
+    // Get the user's profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userData.user.id)
+      .single();
+
+    if (profileError) throw new Error(profileError.message);
+
+    return {
+      ...review,
+      user: {
+        name: profile?.first_name && profile?.last_name
+          ? `${profile.first_name} ${profile.last_name}`
+          : 'Anonymous User',
+        avatar: profile?.avatar || null
+      }
+    };
+  } catch (error) {
+    console.error('Error creating review:', error);
+    throw error;
+  }
 };
 
 // Mark review as helpful or not helpful
@@ -119,43 +164,48 @@ export const updateReviewHelpful = async (
   reviewId: string,
   isHelpful: boolean
 ): Promise<{ success: boolean }> => {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
 
-  if (userError || !userData.user) {
-    throw new Error('You must be logged in to vote on reviews.');
-  }
+    if (userError || !userData.user) {
+      throw new Error('You must be logged in to vote on reviews.');
+    }
 
-  // Check if user already voted
-  const { data: existingVote, error: voteError } = await supabase
-    .from('review_votes')
-    .select('*')
-    .eq('review_id', reviewId)
-    .eq('user_id', userData.user.id)
-    .maybeSingle();
-
-  if (voteError) throw new Error(voteError.message);
-
-  // If vote exists, update it
-  if (existingVote) {
-    const { error: updateError } = await supabase
+    // Check if user already voted
+    const { data: existingVote, error: voteError } = await supabase
       .from('review_votes')
-      .update({ is_helpful: isHelpful })
-      .eq('id', existingVote.id);
+      .select('*')
+      .eq('review_id', reviewId)
+      .eq('user_id', userData.user.id)
+      .maybeSingle();
 
-    if (updateError) throw new Error(updateError.message);
+    if (voteError) throw new Error(voteError.message);
+
+    // If vote exists, update it
+    if (existingVote) {
+      const { error: updateError } = await supabase
+        .from('review_votes')
+        .update({ is_helpful: isHelpful })
+        .eq('id', existingVote.id);
+
+      if (updateError) throw new Error(updateError.message);
+    }
+    // Otherwise create a new vote
+    else {
+      const { error: insertError } = await supabase
+        .from('review_votes')
+        .insert({
+          review_id: reviewId,
+          user_id: userData.user.id,
+          is_helpful: isHelpful
+        });
+
+      if (insertError) throw new Error(insertError.message);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating review vote:', error);
+    throw error;
   }
-  // Otherwise create a new vote
-  else {
-    const { error: insertError } = await supabase
-      .from('review_votes')
-      .insert({
-        review_id: reviewId,
-        user_id: userData.user.id,
-        is_helpful: isHelpful
-      });
-
-    if (insertError) throw new Error(insertError.message);
-  }
-
-  return { success: true };
 };
