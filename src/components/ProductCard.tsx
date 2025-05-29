@@ -19,10 +19,16 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 
   // Format price with discount
   const formatPrice = (price: number, discount?: number) => {
+    if (!discount || discount <= 0) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'RWF',
+      }).format(price);
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'RWF',
-    }).format(price - (price * ((discount || 0) / 100)));
+    }).format(price - (price * (discount / 100)));
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -40,9 +46,9 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
     >
       <div className="bg-white dark:bg-ubaka-900/20 rounded-xl overflow-hidden shadow-subtle transition-all duration-300 hover:shadow-md relative h-full flex flex-col">
         {/* Discount tag */}
-        {product.discount && product.discount > 0 && (
+        {product.discount > 0 && (
           <div className="absolute top-4 left-4 z-10 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
-            {product.discount}% OFF
+            {product.discount} % OFF
           </div>
         )}
 
@@ -91,8 +97,8 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
                   <Star
                     key={i}
                     className={`h-3.5 w-3.5 ${i < Math.floor(product.rating || 0)
-                        ? 'text-yellow-500 fill-yellow-500'
-                        : 'text-gray-300'
+                      ? 'text-yellow-500 fill-yellow-500'
+                      : 'text-gray-300'
                       }`}
                   />
                 ))}

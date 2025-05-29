@@ -114,13 +114,13 @@ const ProductDetail = () => {
                       {formatPrice(product.price, product.discount)}
                     </div>
 
-                    {product.discount && product.discount > 0 && (
+                    {product.discount > 0 && (
                       <div className="ml-3 flex flex-col">
                         <span className="text-lg text-muted-foreground line-through">
                           {formatPrice(product.price)}
                         </span>
                         <span className="text-sm text-red-500 font-medium">
-                          {product.discount}% OFF
+                          {product.discount} % OFF
                         </span>
                       </div>
                     )}
