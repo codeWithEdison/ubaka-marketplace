@@ -1,69 +1,91 @@
-# Welcome to your Lovable project
+# Ubaka Marketplace
 
-## Project info
+A modern e-commerce platform built with React, TypeScript, and Supabase.
 
-**URL**: https://lovable.dev/projects/e82bc5c2-beac-4b03-a6b7-9fd829e9dd8d
+## Live Demo
 
-## How can I edit this code?
+Visit the live application at: [https://ubaka.codewithedison.com/](https://ubaka.codewithedison.com/)
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+- 🛍️ Product browsing and searching
+- 🔍 Advanced filtering and sorting
+- 🛒 Shopping cart functionality
+- ⭐ Product reviews and ratings
+- 👤 User authentication
+- 💳 Secure checkout process
+- 📱 Responsive design for all devices
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e82bc5c2-beac-4b03-a6b7-9fd829e9dd8d) and start prompting.
+## Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend:**
+  - React
+  - TypeScript
+  - Vite
+  - Tailwind CSS
+  - shadcn/ui
+  - React Query
+  - React Router
 
-**Use your preferred IDE**
+- **Backend:**
+  - Supabase
+  - PostgreSQL
+  - Edge Functions
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Getting Started
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
 
-Follow these steps:
+- Node.js (v16 or higher)
+- npm or yarn
+- Git
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Installation
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+1. Clone the repository:
+```bash
+git clone https://github.com/codeWithEdison/ubaka-marketplace.git
+cd ubaka-marketplace
 ```
 
-**Edit a file directly in GitHub**
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+3. Create a `.env` file in the root directory and add your Supabase credentials:
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-**Use GitHub Codespaces**
+4. Start the development server:
+```bash
+npm run dev
+# or
+yarn dev
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The application will be available at `http://localhost:5173`
 
-## What technologies are used for this project?
+## Contributing
 
-This project is built with .
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## How can I deploy this project?
+## License
 
-Simply open [Lovable](https://lovable.dev/projects/e82bc5c2-beac-4b03-a6b7-9fd829e9dd8d) and click on Share -> Publish.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## I want to use a custom domain - is that possible?
+## Contact
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+Edison - [@codeWithEdison](https://github.com/codeWithEdison)
+
+Project Link: [https://github.com/codeWithEdison/ubaka-marketplace](https://github.com/codeWithEdison/ubaka-marketplace)
