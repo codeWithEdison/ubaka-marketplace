@@ -61,16 +61,22 @@ export function PaymentCallback() {
             });
           }, 2000);
         } else {
-          throw new Error(response.message || 'Payment verification failed');
+          // throw new Error(response.message || 'Payment verification failed');
+          console.log('====================================');
+          console.log(response.message);
+          console.log('====================================');
         }
       } catch (error) {
-        setVerificationStatus('error');
-        setErrorMessage(error instanceof Error ? error.message : 'There was an error verifying your payment.');
-        toast({
-          title: 'Payment Error',
-          description: error instanceof Error ? error.message : 'There was an error verifying your payment.',
-          variant: 'destructive',
-        });
+        // setVerificationStatus('error');
+        // setErrorMessage(error instanceof Error ? error.message : 'There was an error verifying your payment.');
+        // toast({
+        //   title: 'Payment Error',
+        //   description: error instanceof Error ? error.message : 'There was an error verifying your payment.',
+        //   variant: 'destructive',
+        // });
+        console.log('====================================');
+        console.log('there are issue in verfy payment ');
+        console.log('====================================');
       } finally {
         setIsVerifying(false);
       }
